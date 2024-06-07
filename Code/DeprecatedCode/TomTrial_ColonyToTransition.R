@@ -6,7 +6,7 @@ library(factoextra)
 library(NbClust)
 
 # Data Load ---------------------------------------------------------------
-Col=read.csv("./MARAMP22/CSV files/MARAMP22_VitalRates_colonylevel_CLEAN.csv")
+Col=read.csv("./CSV files/MARAMP22_VitalRates_colonylevel_CLEAN.csv")
 Col$TL_Date=ymd(Col$TL_Date)
 
 # Determine Unique Time Points ---------------------------
@@ -139,5 +139,5 @@ ColonyTransitions$l10_Area_END[is.infinite(ColonyTransitions$l10_Area_END)]=NA
 ColonyTransitions$l10TransitionMagnitude=ColonyTransitions$l10_Area_END-ColonyTransitions$l10_Area_STA
 
 # Transition Data Out -----------------------------------------------------
-write.csv(x = ColonyTransitions,file = "./MARAMP22/CSV files/MARAMP_ColonyTransitions_TomTrial.csv")
+write.csv(x = ColonyTransitions,file = "./CSV files/MARAMP_ColonyTransitions_TomTrial.csv")
 

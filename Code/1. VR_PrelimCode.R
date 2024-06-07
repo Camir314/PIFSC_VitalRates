@@ -13,14 +13,11 @@ library(stringr)
 library(sp)
 
 
-setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
+#setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
 
-# raw <- read.csv("MARAMP22_VitalRates_07-24-2023.csv")
-raw <- read.csv("ASRAMP23_VitalRates_05-07-2024.csv")
-ll <- read.csv("VitalRates_LatLong.csv")
-effort <- read.csv("VitalRates_SurveyEffort.csv")
-
-
+raw <- read.csv("./CSV files/RawData/ASRAMP23_VitalRates_06-06-2024.csv")
+ll <- read.csv("./CSV files/MetaData/VitalRates_LatLong.csv")
+effort <- read.csv("./CSV files/MetaData/VitalRates_SurveyEffort.csv")
 
 #### QC Data ####
 ## (OPTIONAL) Remove superfluous columns:
@@ -30,8 +27,6 @@ raw <- raw %>% select(-c(OID_, TL_SurfA,QC_Check))
 
 ## Look for potential issues in the data:
 lapply(raw, unique)
-
-
 
 # ## Remove or alter rows based on TL_Note:
 # raw <- raw %>% filter(TL_Note != "Out of bounds in 2022") # remove colonies that could not be tracked into 2022
@@ -73,7 +68,7 @@ vr <- raw
 
 # Turn TimePt into Year
 vr$Year <- str_sub(vr$TL_Date,1,4)
-vr %>% group_by(Site, TL_Date, Year) %>% sumvrse() # QC check
+vr %>% group_by(Site, TL_Date, Year) %>% summarise() # QC check
 
 
 
@@ -125,6 +120,110 @@ head(vr)
 #                                            Island == "SAI" ~ "South",
 #                                            Island == "GUA" ~ "South"))
 
+#### Consolidate into colony dataframe ####
+
+# Create colony dataframe:
+vr_col <- vr %>% dplyr::select(Genet_full, TL_Area, TL_Perim, Shape_Leng, Shape_Area, area_perim) 
+vr_meta <- vr %>% dplyr::select(Genet_full, Island, Region, Site, TimePt, Year, TL_Date, Latitude,Longitude,
+                                Genus, TL_Class, TL_Genet, Quadrat, Effort) %>%
+  distinct()
+vr_col <- aggregate(.~Genet_full, data = vr_col, sum)
+vr_col <- left_join(vr_meta,vr_col)
+
+#group_by(Genet_full) %>% summarise(nrow(patches)) # Add in patch count 
+
+# Total genets per Site-Year (ONLY colonies that survived 2+ time points):
+vr_col$Site_Genet <- paste(vr_col$Site,vr_col$TL_Genet,  sep = "_") # use this column to filter
+
+
+# Add column for number of patches
+a <- vr %>% group_by(Site, Year,TL_Genet) %>% summarise(nPatches = n())
+
+vr_col <- left_join(vr_col, a)
+
+
+#### Format dataframe into archive csv file ####
+# Add in Island_Code, DataorError, Error_Category
+archive <- vr_col
+colnames(vr)
+head(archive)
+
+archive <- archive %>% filter(Genus != "MOSP") # Remove MOSP because prevalence is too low
+
+
+# Remove colonies <19cm2 in all time points
+AdSize=(2.5^2*pi) 
+`%notin%` <- Negate(`%in%`) 
+
+t0 <- vr_col %>% filter(Year == "2014" & TL_Area < AdSize & Shape_Area < .0019) %>% 
+  dplyr::select(c(Site, Genus, TL_Genet, Site_Genet))
+t1 <- vr_col %>% filter(Year == "2017" & TL_Area < AdSize & Shape_Area < .0019) %>% 
+  dplyr::select(c(Site, Genus, TL_Genet, Site_Genet)) 
+t2 <- vr_col %>% filter(Year == "2022" & TL_Area < AdSize & Shape_Area < .0019) %>% 
+  dplyr::select(c(Site, Genus, TL_Genet, Site_Genet))
+
+step1 <- inner_join(t0,t1)
+step1 <- step1 %>% distinct() 
+
+step2 <- inner_join(t1,t2)
+step2 <- step2 %>% distinct() 
+
+smallcol <- rbind(step1,step2) %>% distinct()
+
+archive<-subset(archive, Site_Genet %notin% smallcol$Site_Genet)
+
+
+archive$Site <- sub("-", "_", archive$Site);archive$Site <- sub("-", "_", archive$Site) #twice for both underscores
+archive$Error_Category <- "Growth Data"
+archive$DataorError <- "DATA"
+archive$Genet_full <- paste(archive$Site, archive$TL_Genet, archive$TimePt, sep = "_")
+archive <- rename(archive, "Island_Code" = "Island")
+archive <- archive %>% mutate(Island = case_when(Island_Code == "GUA" ~ "Guam",
+                                                 Island_Code == "MAU" ~ "Maug",
+                                                 Island_Code == "PAG" ~ "Pagan",
+                                                 Island_Code == "ASC" ~ "Asuncion",
+                                                 Island_Code == "SAI" ~ "Saipan",
+                                                 Island_Code == "BAK" ~ "Baker",
+                                                 Island_Code == "HOW" ~ "Howland",
+                                                 Island_Code == "OFU" ~ "Ofu & Olosega",
+                                                 Island_Code == "ROS" ~ "Rose Atoll",
+                                                 Island_Code == "TAU" ~ "Tau",
+                                                 Island_Code == "TUT" ~ "Tutuila"))
+archive <- rename(archive, "Genus_Code" = "Genus")
+archive <- archive %>% mutate(Genus = case_when(Genus_Code == "POSP" ~ "Porites sp.",
+                                                Genus_Code == "MOSP" ~ "Montipora sp.",
+                                                Genus_Code == "POCS" ~ "Pocillopora sp.",
+                                                Genus_Code == "ACSP" ~ "Acropora sp."))
+archive <- rename(archive, "Spec_Code" = "TL_Class")
+archive <- rename(archive, "Date" = "TL_Date")
+archive <- rename(archive, "ColonyName" = "Genet_full")
+archive <- rename(archive, "Shape_Length" = "Shape_Leng")
+
+# archive <- archive %>% dplyr::select(-c(TL_Genet, TL_Area, TL_Perim,  
+#                                         Quadrat, TimePt, area_perim))
+
+archive <- archive %>% dplyr::select(Site, Island, Island_Code, Latitude, Longitude, Date, 
+                                     DataorError, Error_Category, ColonyName, Spec_Code, Genus,
+                                     Genus_Code, Shape_Length, Shape_Area)
+
+head(archive)
+
+
+#### Export Data ####
+
+#setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
+write.csv(vr,"./CSV files/PatchLevel/ASRAMP23_VitalRates_patchlevel_CLEAN.csv",row.names = F)
+write.csv(vr_col,"./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_CLEAN.csv",row.names = F)
+write.csv(archive,"./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_archive.csv",row.names = F)
+
+
+###############################################################################################################
+###############################################################################################################
+###############################################################################################################
+###############################################################################################################
+###############################################################################################################
+###############################################################################################################
+
 
 #### Descriptive Tables using patch data ####
 
@@ -161,26 +260,7 @@ a <- vr %>% group_by(Genus, Year, Island) %>% summarise(n = n())
 
 a <- vr %>% group_by(Year,Genus) %>% summarise(n = n())
 
-#### Consolidate into colony dataframe ####
 
-# Create colony dataframe:
-vr_col <- vr %>% dplyr::select(Genet_full, TL_Area, TL_Perim, Shape_Leng, Shape_Area, area_perim) 
-vr_meta <- vr %>% dplyr::select(Genet_full, Island, Region, Site, TimePt, Year, TL_Date, Latitude,Longitude,
-                             Genus, TL_Class, TL_Genet, Quadrat, Effort) %>%
-                      distinct()
-vr_col <- aggregate(.~Genet_full, data = vr_col, sum)
-vr_col <- left_join(vr_meta,vr_col)
-
-              #group_by(Genet_full) %>% sumvrse(nrow(patches)) # Add in patch count 
-
-# Total genets per Site-Year (ONLY colonies that survived 2+ time points):
-vr_col$Site_Genet <- paste(vr_col$Site,vr_col$TL_Genet,  sep = "_") # use this column to filter
-
-
-# Add column for number of patches
-a <- vr %>% group_by(Site, Year,TL_Genet) %>% summarise(nPatches = n())
-
-vr_col <- left_join(vr_col, a)
 
 #### Descriptive Tables using colony data ####
 # Total genets per Site-Year:
@@ -407,70 +487,5 @@ mari_3 <- ggmap(map_s) +
 
 
 
-#### Format dataframe into archive csv file ####
-# Add in Island_Code, DataorError, Error_Category
-archive <- mari_col
-colnames(mari)
-head(archive)
 
-archive <- archive %>% filter(Genus != "MOSP") # Remove MOSP because prevalence is too low
-
-
-# Remove colonies <19cm2 in all time points
-AdSize=(2.5^2*pi) 
-`%notin%` <- Negate(`%in%`) 
-
-t0 <- mari_col %>% filter(Year == "2014" & TL_Area < AdSize & Shape_Area < .0019) %>% 
-  dplyr::select(c(Site, Genus, TL_Genet, Site_Genet))
-t1 <- mari_col %>% filter(Year == "2017" & TL_Area < AdSize & Shape_Area < .0019) %>% 
-  dplyr::select(c(Site, Genus, TL_Genet, Site_Genet)) 
-t2 <- mari_col %>% filter(Year == "2022" & TL_Area < AdSize & Shape_Area < .0019) %>% 
-  dplyr::select(c(Site, Genus, TL_Genet, Site_Genet))
-
-step1 <- inner_join(t0,t1)
-step1 <- step1 %>% distinct() 
-
-step2 <- inner_join(t1,t2)
-step2 <- step2 %>% distinct() 
-
-smallcol <- rbind(step1,step2) %>% distinct()
-
-archive<-subset(archive, Site_Genet %notin% smallcol$Site_Genet)
-
-
-archive$Site <- sub("-", "_", archive$Site);archive$Site <- sub("-", "_", archive$Site) #twice for both underscores
-archive$Error_Category <- "Growth Data"
-archive$DataorError <- "DATA"
-archive$Genet_full <- paste(archive$Site, archive$TL_Genet, archive$TimePt, sep = "_")
-archive <- rename(archive, "Island_Code" = "Island")
-archive <- archive %>% mutate(Island = case_when(Island_Code == "GUA" ~ "Guam",
-                                                Island_Code == "MAU" ~ "Maug",
-                                                Island_Code == "PAG" ~ "Pagan",
-                                                Island_Code == "ASC" ~ "Asuncion",
-                                                Island_Code == "SAI" ~ "Saipan"))
-archive <- rename(archive, "Genus_Code" = "Genus")
-archive <- archive %>% mutate(Genus = case_when(Genus_Code == "POSP" ~ "Porites sp.",
-                                                Genus_Code == "MOSP" ~ "Montipora sp.",
-                                                Genus_Code == "POCS" ~ "Pocillopora sp.",
-                                                Genus_Code == "ACSP" ~ "Acropora sp."))
-archive <- rename(archive, "Spec_Code" = "TL_Class")
-archive <- rename(archive, "Date" = "TL_Date")
-archive <- rename(archive, "ColonyName" = "Genet_full")
-archive <- rename(archive, "Shape_Length" = "Shape_Leng")
-
-archive <- archive %>% dplyr::select(-c(TL_Genet, TL_Cx, TL_Cy, TL_Area, TL_Perim, TL_Note, 
-                                        Quadrat, Morph_Code, TimePt, Annotator, area_perim))
-                    
-archive <- archive %>% dplyr::select(Site, Island, Island_Code, Latitude, Longitude, Date, 
-                              DataorError, Error_Category, ColonyName, Spec_Code, Genus,
-                              Genus_Code, Shape_Length, Shape_Area)
-
-head(archive)
-
-#### Export Data ####
-
-setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
-write.csv(mari,"ASRAMP23_VitalRates_patchlevel_CLEAN.csv",row.names = F)
-write.csv(mari_col,"ASRAMP23_VitalRates_colonylevel_CLEAN.csv",row.names = F)
-write.csv(archive,"ASRAMP23_VitalRates_colonylevel_archive.csv",row.names = F)
 
