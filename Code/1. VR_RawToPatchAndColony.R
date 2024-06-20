@@ -123,7 +123,7 @@ head(vr)
 #### Consolidate into colony dataframe ####
 
 # Create colony dataframe:
-vr_col <- vr %>% dplyr::select(Genet_full, TL_Area, TL_Perim, Shape_Leng, Shape_Area, area_perim) 
+vr_col <- vr %>% dplyr::select(Genet_full, TL_Area, TL_Perim, Shape_Leng, Shape_Area, SArea, area_perim) 
 vr_meta <- vr %>% dplyr::select(Genet_full, Island, Region, Site, TimePt, Year, TL_Date, Latitude,Longitude,
                                 Genus, TL_Class, TL_Genet, Quadrat, Effort) %>%
   distinct()
