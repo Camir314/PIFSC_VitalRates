@@ -15,14 +15,14 @@ library(sp)
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
 
-raw <- read.csv("./CSV files/RawData/ASRAMP23_VitalRates_06-06-2024.csv")
+raw <- read.csv("./CSV files/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
 ll <- read.csv("./CSV files/MetaData/VitalRates_LatLong.csv")
 effort <- read.csv("./CSV files/MetaData/VitalRates_SurveyEffort.csv")
 
 #### QC Data ####
 ## (OPTIONAL) Remove superfluous columns:
 colnames(raw)
-raw <- raw %>% select(-c(OID_, TL_SurfA,QC_Check))
+raw <- raw %>% select(-c(OID_, TL_SurfA))
 
 
 ## Look for potential issues in the data:
@@ -46,7 +46,7 @@ lapply(raw, unique)
 
 
 ## Check if TimePt is labelled correctly:
-a <- raw %>% group_by(Site, TL_Date, TimePt) %>% summarise(sum(TimePt))
+a <- raw %>% group_by(Site, TL_Date, TimePt) %>% summarise(sum(TimePt)) ; View(a)
   # HOW-005-2017/2018 = Jan 1
   # TUT-019-2018 = Jan 1
 # raw$TL_Date <- as.factor(raw$TL_Date)   
