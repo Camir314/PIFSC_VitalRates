@@ -17,51 +17,16 @@ A2D=function(A){return(2*sqrt(A/pi))}
 D2A=function(D){return((D/2)^2*pi)}
 source("R/gcdist.R")
 
-# Loading / Managing DataFrames: ColonyLevel, surv_dat  ----------------------------------------------  ---------
-# Already Done?
-load("data/Colony_Data_20210917_edited.rdata") #ColonyLevel
-#load("data/Colony_Data_202100917_edited_survival.rdata") #surv_dat
-#skip to line 60!
-
-# If not, edit ColonyLevel here!
-##Manage ColonyLevel and create surv_dat
-load("data/Patch_And_Colony_Data_20210917.rdata") #ColonyLevel
-if(!all(c("Survival","log10_ESc")%in%names(ColonyLevel))){
-  #LN size
-  ColonyLevel$ln_SS <- log(ColonyLevel$StartingSize)
-  ColonyLevel$ln_ES <- log(ColonyLevel$EndingSize)
-  #Log10 size
-  ColonyLevel$log10_SS <- log10(ColonyLevel$StartingSize)
-  ColonyLevel$log10_ES <- log10(ColonyLevel$EndingSize)
-  #changing ln_ES/ln_SS from Na/-Inf to an actual value for recruitment/mortality
-  ColonyLevel$log10_SS <- as.numeric(ColonyLevel$log10_SS)
-  ColonyLevel$log10_SS[ColonyLevel$log10_SS == -Inf] <-NA
-  
-  #Mortality to Survival
-  ColonyLevel <- cbind(ColonyLevel, data.frame(Survival = 1 - ColonyLevel$Mortality))
-  
-  # Making the size term yearly
-  GY <- (ColonyLevel$ln_ES - ColonyLevel$ln_SS)*(1/ColonyLevel$Interval_Year)
-  ColonyLevel <- cbind(ColonyLevel, data.frame(ln_ESc = ColonyLevel$ln_SS + GY))
-  GY <- (ColonyLevel$log10_ES - ColonyLevel$log10_SS)*(1/ColonyLevel$Interval_Year)
-  ColonyLevel <- cbind(ColonyLevel, data.frame(log10_ESc = ColonyLevel$log10_SS + GY))
-  ColonyLevel$log10_ESc[ColonyLevel$log10_ESc == -Inf] <-NA
-}
-#Add island code to Lisianski
-ColonyLevel$Island <- paste0(substr(ColonyLevel$Site,1,3))
-#add region to ColonyLevel datset
-RegionLU=c("NWHI","MHI","NWHI","NWHI","MHI","MHI","NWHI") #create a lookup table
-names(RegionLU)=c("FFS","HAW","KUR","LIS","MAI","OAH","PHR")
-ColonyLevel$REGION = RegionLU[ColonyLevel$Island]
-
+# Loading / Managing DataFrames: ColTrans, surv_dat  ----------------------------------------------  ---------
+ColTrans=read.csv("./CSV files/ColonyTransitions/ASRAMP23_ColonyTransitions.csv")
 
 #Prepping surv_dat output
-surv_dat=ColonyLevel[,c("ColonyID","log10_SS","Survival","Genus_Code","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years","StartingDate","EndingDate")]
+surv_dat=ColTrans[,c("Site_Genet","l10_Area_STA","Survival","Genus","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years","StartingDate","EndingDate")]
 surv_dat=subset(surv_dat,TransitionType!="RECR")
 names(surv_dat)=c("ColonyID","size","survival","Genus_Code","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years")
 
 # Change these file names when saving data to refect the new changes
-# save(ColonyLevel, file="data/Colony_Data_20210917_edited.rdata")
+# save(ColTrans, file="data/Colony_Data_20210917_edited.rdata")
 # save(surv_dat, file="data/Colony_Data_202100917_edited_survival.rdata")
 
 
@@ -69,19 +34,19 @@ names(surv_dat)=c("ColonyID","size","survival","Genus_Code","Interval","SiteInte
 
 #Define Site - Interval - Taxa groupings for which to run models
 #SiteIntervalGenus
-ColonyLevel$SIG=paste0(substr(ColonyLevel$Site,1,3),substr(ColonyLevel$Site,9,11),"_",
-                       substr(year(ColonyLevel$StartingDate),3,4),leadz(month(ColonyLevel$StartingDate),2),"-",
-                       substr(year(ColonyLevel$EndingDate),3,4),leadz(month(ColonyLevel$EndingDate),2),"_",
-                       ColonyLevel$Genus_Code)
+ColTrans$SIG=paste0(substr(ColTrans$Site,1,3),substr(ColTrans$Site,9,11),"_",
+                       substr(year(ColTrans$StartingDate),3,4),leadz(month(ColTrans$StartingDate),2),"-",
+                       substr(year(ColTrans$EndingDate),3,4),leadz(month(ColTrans$EndingDate),2),"_",
+                       ColTrans$Genus_Code)
 #SiteIntervalSpecies
-ColonyLevel$SIS=paste0(substr(ColonyLevel$Site,1,3),substr(ColonyLevel$Site,9,11),"_",
-                       substr(year(ColonyLevel$StartingDate),3,4),leadz(month(ColonyLevel$StartingDate),2),"-",
-                       substr(year(ColonyLevel$EndingDate),3,4),leadz(month(ColonyLevel$EndingDate),2),"_",
-                       ColonyLevel$Spec_Code)
+ColTrans$SIS=paste0(substr(ColTrans$Site,1,3),substr(ColTrans$Site,9,11),"_",
+                       substr(year(ColTrans$StartingDate),3,4),leadz(month(ColTrans$StartingDate),2),"-",
+                       substr(year(ColTrans$EndingDate),3,4),leadz(month(ColTrans$EndingDate),2),"_",
+                       ColTrans$Spec_Code)
 
 #Report on Grouping
-Usig=unique(ColonyLevel$SIG)
-Usis=unique(ColonyLevel$SIS)
+Usig=unique(ColTrans$SIG)
+Usis=unique(ColTrans$SIS)
 Nsig=length(Usig);Nsig
 Nsis=length(Usis);Nsis
 
@@ -95,9 +60,9 @@ sitemd <- distinct(sitemd)
 #sitemd=sitemd %>% group_by(Site) %>% summarize(Lat=mean(Latitude),Lon=mean(Longitude))
 
 #Reassign OAH_XX_022 to OAH_OCC_005
-ColonyLevel$Site[which(ColonyLevel$Site=="OAH_XXX_022")]="OAH_OCC_005"
+ColTrans$Site[which(ColTrans$Site=="OAH_XXX_022")]="OAH_OCC_005"
 
-uSD=ColonyLevel[,c("Site","StartingDate","EndingDate")] %>% 
+uSD=ColTrans[,c("Site","StartingDate","EndingDate")] %>% 
   pivot_longer(cols=c("StartingDate","EndingDate"),values_to="Date") %>% 
   dplyr::select(all_of(c("Site","Date"))) %>% 
   unique()
@@ -111,23 +76,23 @@ st_is_valid(secshp)[-26]
 CL.sf = CL.sf %>% st_set_crs(value = st_crs(secshp[-26])) #retrieve coordinate system
 Site2Sec=st_join(CL.sf,secshp[-26,"SEC_NAME"])
 
-#Add Sector to ColonyLevel dataframe!
+#Add Sector to ColTrans dataframe!
 Site2Sec_ONLY=unique(st_drop_geometry(Site2Sec)[,c("Site","SEC_NAME")])
 Site2Sec_ONLY$SEC_NAME[Site2Sec_ONLY$Site=="FFS_OCC_002"]="French Frigate"
 Site2Sec_ONLY$SEC_NAME[Site2Sec_ONLY$Site=="FFS_OCC_014"]="French Frigate"
 Site2Sec_ONLY$SEC_NAME[Site2Sec_ONLY$Site=="HAW_OCC_003"]="HAW_PUNA"
 Site2Sec_ONLY$SEC_NAME[Site2Sec_ONLY$Site=="HAW_SIO_K08"]="HAW_KONA"
 
-#ColonyLevel=ColonyLevel %>% left_join(Site2Sec_ONLY[,c("Site","SEC_NAME")],by="Site")
-#save(ColonyLevel, file="data/Colony_Data_20210917_edited.rdata")
+#ColTrans=ColTrans %>% left_join(Site2Sec_ONLY[,c("Site","SEC_NAME")],by="Site")
+#save(ColTrans, file="data/Colony_Data_20210917_edited.rdata")
 
 
 #Get observed proportion of 'juveniles' as true recruits (SfM data)
 #gray=juveniles, blue=true recruits
-RECs=subset(ColonyLevel,TransitionTypeSimple=="RECR")
+RECs=subset(ColTrans,TransitionTypeSimple=="RECR")
 bw=0.5
 ggplot()+
-  geom_histogram(data=subset(ColonyLevel,EndingSize>0),aes(A2D(EndingSize)),fill="grey",binwidth=bw)+
+  geom_histogram(data=subset(ColTrans,EndingSize>0),aes(A2D(EndingSize)),fill="grey",binwidth=bw)+
   xlim(c(0,10))+
   geom_histogram(data=RECs,aes(A2D(EndingSize)),fill="blue",binwidth=bw)+
   facet_grid(Genus_Code~.,scales = "free_y")+
@@ -145,13 +110,13 @@ for(i_b in 1:length(binwidths)){
   N=5/binwidth
   for(i_G in 1:length(uG)){
     if(uG[i_G]=="SSSS"){
-      hcl=hist(A2D(subset(ColonyLevel,EndingSize>0)$EndingSize),breaks=seq(0,1000,by=binwidth),plot = F)
+      hcl=hist(A2D(subset(ColTrans,EndingSize>0)$EndingSize),breaks=seq(0,1000,by=binwidth),plot = F)
       hrc=hist(A2D(RECs$EndingSize),breaks=seq(0,1000,by=binwidth),plot = F)
       PropRec_v=(hrc$counts[1:(N+1)]/hcl$counts[1:(N+1)])
       out_i=which(PropRec_g$Genus_Code==uG[i_G]&PropRec_g$BinWidth==binwidth)
       PropRec_g$PropRec[out_i]=mean(PropRec_v[1:(N+1)],na.rm=T)
     }else{
-      hcl=hist(A2D(subset(ColonyLevel,EndingSize>0&Genus_Code==uG[i_G])$EndingSize),breaks=seq(0,1000,by=binwidth),plot = F)
+      hcl=hist(A2D(subset(ColTrans,EndingSize>0&Genus_Code==uG[i_G])$EndingSize),breaks=seq(0,1000,by=binwidth),plot = F)
       hrc=hist(A2D(subset(RECs,Genus_Code==uG[i_G])$EndingSize),breaks=seq(0,1000,by=binwidth),plot = F)
       PropRec_v=(hrc$counts[1:(N+1)]/hcl$counts[1:(N+1)])
       out_i=which(PropRec_g$Genus_Code==uG[i_G]&PropRec_g$BinWidth==binwidth)
@@ -208,12 +173,12 @@ Asurv_l$A.Surv.m2 =Asurv_l$Ncircrats*0.5 #numb of circrats * 0.5m2 (size of circ
 Asurv_l$A.Surv.cm2 = Asurv_l$Ncircrats*5000 #area surveyed cm2
 
 #Area of Adult Colonies for each SIG
-Atax=ColonyLevel %>%
+Atax=ColTrans %>%
   group_by(SIG,Site,Interval,Genus_Code,StartingDate,EndingDate,Interval_Years) %>% 
   summarise(AdultCoralArea_cm2=sum(StartingSize)) #Area of adult cm2 = sum all corals in each genus for each year
 
 #Link to Nrecruits from the StartingSize summed area: Adults at beginning of interval generate 
-RecSFMTib=ColonyLevel %>%
+RecSFMTib=ColTrans %>%
   filter(TransitionTypeSimple %in% c("RECR")) %>% 
   group_by(SEC_NAME,SIG,Site,Interval,Genus_Code,REGION,StartingDate,EndingDate,Interval_Years) %>% 
   summarize(Nrec=length(which(TransitionTypeSimple=="RECR"))) %>% 
@@ -261,7 +226,7 @@ rea_sec=read.csv("data/NWHI_MHI_REA_Data_Sector.csv")
 #Get Percent Cover by Genus at each Sector
 cov1_sec=read.csv("data/NWHI_MHI_Cover_T1_Data_Sector.csv")
 cov3_sec=read.csv("data/NWHI_MHI_Cover_T3_Data_Sector.csv")
-uSec=na.omit(unique(ColonyLevel$SEC_NAME))
+uSec=na.omit(unique(ColTrans$SEC_NAME))
 names(cov1_sec)[2:15]=substr(names(cov1_sec)[2:15],6,999)
 meta=names(cov1_sec)[2:6]
 classes1=names(cov1_sec)[7:15]

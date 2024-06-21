@@ -5,8 +5,9 @@ library(lubridate)
 library(factoextra)
 library(NbClust)
 
+REGIONYR="ASRAMP23"#"MARAMP22"
 # Data Load ---------------------------------------------------------------
-Col=read.csv("./CSV files/ColonyLevel/MARAMP22_VitalRates_colonylevel_CLEAN.csv")
+Col=read.csv(paste0("./CSV files/ColonyLevel/",REGIONYR,"_VitalRates_colonylevel_CLEAN.csv"))
 Col$TL_Date=ymd(Col$TL_Date)
 
 # Determine Unique Time Points ---------------------------
@@ -66,7 +67,7 @@ uTP=sort(unique(Col$TP_ID))
 SiteData=unique(Col[,c("Island","Site","TP_ID","Year","TL_Date")]) %>% arrange(Site,TP_ID)
 
 #joincols
-alljoincols=c("Island","Site","Genus","Site_Genet","TP_ID","Year","TL_Date","TL_Area","TL_Perim")
+alljoincols=c("Island","Site","Genus","Site_Genet","TP_ID","Year","TL_Date","TL_Area","TL_Perim","nPatches")
 byjoincols=c("Island","Site","Genus","Site_Genet")
 
 ColonyTransitions=NULL
@@ -112,6 +113,7 @@ for(i_tp in 1:(length(uTP)-1)){
   RTrCol_0=left_join(RTrCol_0,SiteData,by=c("Island","Site","TP_ID"))
   RTrCol_0$TL_Area=0
   RTrCol_0$TL_Perim=0
+  RTrCol_0$nPatches=0
   RTrCol=left_join(RTrCol_0,RTrCol_1,by=byjoincols,suffix=c("_STA","_END"))
   RTrCol$TransitionTypeSimple="RECR"
   
@@ -126,6 +128,7 @@ for(i_tp in 1:(length(uTP)-1)){
   MTrCol_1=left_join(MTrCol_1,SiteData,by=c("Island","Site","TP_ID"))
   MTrCol_1$TL_Area=0
   MTrCol_1$TL_Perim=0
+  MTrCol_1$nPatches=0
   MTrCol=left_join(MTrCol_0,MTrCol_1,by=byjoincols,suffix=c("_STA","_END"))
   MTrCol$TransitionTypeSimple="MORT"
   
@@ -136,6 +139,8 @@ for(i_tp in 1:(length(uTP)-1)){
 #Build Out Colony Transition Data
 ColonyTransitions=ColonyTransitions %>%
   mutate(
+    #Interval Name
+    Interval=paste0(substr(Year_STA,3,4),"_",substr(Year_END,3,4)),
     #Transition and Annualization
     l10_Area_STA=log10(TL_Area_STA),
     l10_Area_END=log10(TL_Area_END),
@@ -147,8 +152,6 @@ ColonyTransitions=ColonyTransitions %>%
     Survival=1-Mortality
 )
 
-
-
 # Transition Data Out -----------------------------------------------------
-write.csv(x = ColonyTransitions,file = "./CSV files/ColonyTransitions/MARAMP22_ColonyTransitions.csv")
+write.csv(x = ColonyTransitions,file = paste0("./CSV files/ColonyTransitions/",REGIONYR,"_ColonyTransitions.csv"))
 
