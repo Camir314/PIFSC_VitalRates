@@ -6,7 +6,7 @@ library(factoextra)
 library(NbClust)
 
 # Data Load ---------------------------------------------------------------
-Col=read.csv("./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_CLEAN.csv")
+Col=read.csv("./CSV files/ColonyLevel/MARAMP22_VitalRates_colonylevel_CLEAN.csv")
 Col$TL_Date=ymd(Col$TL_Date)
 
 # Determine Unique Time Points ---------------------------
@@ -132,14 +132,23 @@ for(i_tp in 1:(length(uTP)-1)){
   TP2_Trans=rbind(GTrCol,RTrCol,MTrCol)
   ColonyTransitions=rbind(ColonyTransitions,TP2_Trans)
 }
-# Calculate Transition
-ColonyTransitions$Interval_Years=as.numeric(difftime(ColonyTransitions$TL_Date_END,ColonyTransitions$TL_Date_STA,units = "days"))/365.25
-ColonyTransitions$l10_Area_STA=log10(ColonyTransitions$TL_Area_STA)
-ColonyTransitions$l10_Area_END=log10(ColonyTransitions$TL_Area_END)
-ColonyTransitions$l10_Area_STA[is.infinite(ColonyTransitions$l10_Area_STA)]=NA
-ColonyTransitions$l10_Area_END[is.infinite(ColonyTransitions$l10_Area_END)]=NA
-ColonyTransitions$l10TransitionMagnitude=ColonyTransitions$l10_Area_END-ColonyTransitions$l10_Area_STA
+
+#Build Out Colony Transition Data
+ColonyTransitions=ColonyTransitions %>%
+  mutate(
+    #Transition and Annualization
+    l10_Area_STA=log10(TL_Area_STA),
+    l10_Area_END=log10(TL_Area_END),
+    l10TransitionMagnitude=l10_Area_END-l10_Area_STA,
+    Interval_Years=as.numeric(difftime(TL_Date_END,TL_Date_STA,units = "days"))/365.25,
+    l10_Area_ENDann=l10_Area_STA+(l10TransitionMagnitude/Interval_Years),
+    #Mortality and Survival
+    Mortality=if_else(TransitionTypeSimple=="MORT",1,0),
+    Survival=1-Mortality
+)
+
+
 
 # Transition Data Out -----------------------------------------------------
-write.csv(x = ColonyTransitions,file = "./CSV files/ColonyTransitions/ASRAMP23_ColonyTransitions.csv")
+write.csv(x = ColonyTransitions,file = "./CSV files/ColonyTransitions/MARAMP22_ColonyTransitions.csv")
 
