@@ -5,7 +5,7 @@ library(lubridate)
 library(factoextra)
 library(NbClust)
 
-REGIONYR="ASRAMP23"#"MARAMP22"
+REGIONYR="ASRAMP23" #"MARAMP22"
 # Data Load ---------------------------------------------------------------
 Col=read.csv(paste0("./CSV files/ColonyLevel/",REGIONYR,"_VitalRates_colonylevel_CLEAN.csv"))
 Col$TL_Date=ymd(Col$TL_Date)
@@ -42,7 +42,7 @@ if(TP_METHOD=="YEAR"){
   par(mfrow=c(1,1))
   plot(hcuDD,labels=uD);rect.hclust(hcuDD,k=Kval)
   
-  #write Date to Timepoint number Look up table
+  #write Date to Time point number Look up table
   Date_TP_df=data.frame(ID0=cutree(hcuDD,k=Kval),Date=uD)
   #ensure TP # are chronological
   ChronID=Date_TP_df %>% group_by(ID0) %>% summarize(mnDate=mean(Date)) %>% arrange(mnDate) 
@@ -67,12 +67,13 @@ uTP=sort(unique(Col$TP_ID))
 SiteData=unique(Col[,c("Island","Site","TP_ID","Year","TL_Date")]) %>% arrange(Site,TP_ID)
 
 #joincols
-alljoincols=c("Island","Site","Genus","Site_Genet","TP_ID","Year","TL_Date","TL_Area","TL_Perim","nPatches")
+alljoincols=c("Island","Site","Genus","Site_Genet","TP_ID","Year","TL_Date","SArea","Shape_Area","Shape_Leng","nPatches") #switch to shape_area and shape_perim 
 byjoincols=c("Island","Site","Genus","Site_Genet")
 
 ColonyTransitions=NULL
 for(i_tp in 1:(length(uTP)-1)){
   TP_0=i_tp;TP_1=i_tp+1
+  # TP_0=2; TP_1=3
   
   #For the data across these two time points, only include sites sampled in both years
   TP_0sites=SiteData %>% filter(TP_ID == TP_0) %>% select(Site) %>% distinct()
@@ -111,8 +112,9 @@ for(i_tp in 1:(length(uTP)-1)){
   RTrCol_0=RTrCol_1[,byjoincols]
   RTrCol_0$TP_ID=TP_0
   RTrCol_0=left_join(RTrCol_0,SiteData,by=c("Island","Site","TP_ID"))
-  RTrCol_0$TL_Area=0
-  RTrCol_0$TL_Perim=0
+  RTrCol_0$Shape_Area=0
+  RTrCol_0$Shape_Leng=0
+  RTrCol_0$SArea=0
   RTrCol_0$nPatches=0
   RTrCol=left_join(RTrCol_0,RTrCol_1,by=byjoincols,suffix=c("_STA","_END"))
   RTrCol$TransitionTypeSimple="RECR"
@@ -126,13 +128,14 @@ for(i_tp in 1:(length(uTP)-1)){
   MTrCol_1=MTrCol_0[,byjoincols]
   MTrCol_1$TP_ID=TP_1
   MTrCol_1=left_join(MTrCol_1,SiteData,by=c("Island","Site","TP_ID"))
-  MTrCol_1$TL_Area=0
-  MTrCol_1$TL_Perim=0
+  MTrCol_1$Shape_Area=0
+  MTrCol_1$Shape_Leng=0
+  MTrCol_1$SArea=0
   MTrCol_1$nPatches=0
   MTrCol=left_join(MTrCol_0,MTrCol_1,by=byjoincols,suffix=c("_STA","_END"))
   MTrCol$TransitionTypeSimple="MORT"
   
-  TP2_Trans=rbind(GTrCol,RTrCol,MTrCol)
+  TP2_Trans=rbind(GTrCol,RTrCol,MTrCol) 
   ColonyTransitions=rbind(ColonyTransitions,TP2_Trans)
 }
 
@@ -142,11 +145,15 @@ ColonyTransitions=ColonyTransitions %>%
     #Interval Name
     Interval=paste0(substr(Year_STA,3,4),"_",substr(Year_END,3,4)),
     #Transition and Annualization
-    l10_Area_STA=log10(TL_Area_STA),
-    l10_Area_END=log10(TL_Area_END),
+    l10_Area_STA=log10(Shape_Area_STA),
+    l10_Area_END=log10(Shape_Area_END),
     l10TransitionMagnitude=l10_Area_END-l10_Area_STA,
+    l10_SArea_STA=log10(SArea_STA),
+    l10_SArea_END=log10(SArea_END),
+    l10STransitionMagnitude=l10_SArea_END-l10_SArea_STA,
     Interval_Years=as.numeric(difftime(TL_Date_END,TL_Date_STA,units = "days"))/365.25,
     l10_Area_ENDann=l10_Area_STA+(l10TransitionMagnitude/Interval_Years),
+    l10_SArea_ENDann=l10_SArea_STA+(l10STransitionMagnitude/Interval_Years),
     #Mortality and Survival
     Mortality=if_else(TransitionTypeSimple=="MORT",1,0),
     Survival=1-Mortality

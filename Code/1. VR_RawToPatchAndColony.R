@@ -15,14 +15,15 @@ library(sp)
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
 
-raw <- read.csv("./CSV files/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
+# raw <- read.csv("./CSV files/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
+raw <- read.csv("./CSV files/RawData/MARAMP22_VitalRates_06-24-2024.csv")
 ll <- read.csv("./CSV files/MetaData/VitalRates_LatLong.csv")
 effort <- read.csv("./CSV files/MetaData/VitalRates_SurveyEffort.csv")
 
 #### QC Data ####
 ## (OPTIONAL) Remove superfluous columns:
 colnames(raw)
-raw <- raw %>% select(-c(OID_, TL_SurfA))
+raw <- raw %>% select(-c(OID_, TL_SurfA, TL_Note))
 
 
 ## Look for potential issues in the data:
@@ -33,24 +34,24 @@ lapply(raw, unique)
 # 
 # 
 # ## QC Morph code:
-# a <- raw[raw$Morph_Code != "MD" & raw$Morph_Code != "EM" & raw$Morph_Code != "BR" & raw$Morph_Code != "TB" 
+# a <- raw[raw$Morph_Code != "MD" & raw$Morph_Code != "EM" & raw$Morph_Code != "BR" & raw$Morph_Code != "TB"
 #         & raw$Morph_Code != "PL" & raw$Morph_Code != "KN",]
 # 
-# raw <- raw %>% mutate(Morph_Code = case_when(Morph_Code == "RM" ~ "EM",
-#                                              Morph_Code == "EM" ~ "EM",
-#                                              Morph_Code == "TB" ~ "TB",
-#                                              Morph_Code == "BR" ~ "BR",
-#                                              Morph_Code == "KN" ~ "KN",
-#                                              Morph_Code == "PL" ~ "PL",
-#                                              Morph_Code == "MD" ~ "MD"))
+raw <- raw %>% mutate(Morph_Code = case_when(Morph_Code == "RM" ~ "EM",
+                                             Morph_Code == "EM" ~ "EM",
+                                             Morph_Code == "TB" ~ "TB",
+                                             Morph_Code == "BR" ~ "BR",
+                                             Morph_Code == "KN" ~ "KN",
+                                             Morph_Code == "PL" ~ "PL",
+                                             Morph_Code == "MD" ~ "MD"))
 
 
 ## Check if TimePt is labelled correctly:
 a <- raw %>% group_by(Site, TL_Date, TimePt) %>% summarise(sum(TimePt)) ; View(a)
   # HOW-005-2017/2018 = Jan 1
   # TUT-019-2018 = Jan 1
-# raw$TL_Date <- as.factor(raw$TL_Date)   
-# raw <- raw %>% mutate(TL_Date = recode(TL_Date,"1/1/2017" = "4/11/2017"))
+# raw$TL_Date <- as.factor(raw$TL_Date)
+# raw <- raw %>% mutate(TL_Date = recode(TL_Date,"1/1/2017" = "5/3/2017"))
 # raw$TL_Date <- raw$TL_Date[raw$Site == "OCC-HOW-005" & raw$TL_Date == "1/1/2018"] = "6/8/2018"
 # raw$TL_Date <- raw$TL_Date[which(raw$Site == "OCC-TUT-017" & raw$TL_Date == "1/1/2018")] <- "7/6/2018"
 
@@ -212,6 +213,6 @@ head(archive)
 #### Export Data ####
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
-write.csv(vr,"./CSV files/PatchLevel/ASRAMP23_VitalRates_patchlevel_CLEAN.csv",row.names = F)
-write.csv(vr_col,"./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_CLEAN.csv",row.names = F)
+write.csv(vr,"./CSV files/PatchLevel/MARAMP22_VitalRates_patchlevel_CLEAN.csv",row.names = F)
+write.csv(vr_col,"./CSV files/ColonyLevel/MARAMP22_VitalRates_colonylevel_CLEAN.csv",row.names = F)
 write.csv(archive,"./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_archive.csv",row.names = F)
