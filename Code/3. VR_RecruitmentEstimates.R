@@ -15,13 +15,15 @@ library(patchwork)
 leadz=function(x,n){return(formatC(x,width=n,flag=0))}
 A2D=function(A){return(2*sqrt(A/pi))}
 D2A=function(D){return((D/2)^2*pi)}
-source("R/gcdist.R")
+source("R/gcdist.R") # No such file or directory
 
 # Loading / Managing DataFrames: ColTrans, surv_dat  ----------------------------------------------  ---------
 ColTrans=read.csv("./CSV files/ColonyTransitions/ASRAMP23_ColonyTransitions.csv")
 
 #Prepping surv_dat output
-surv_dat=ColTrans[,c("Site_Genet","l10_Area_STA","Survival","Genus","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years","StartingDate","EndingDate")]
+surv_dat=ColTrans[,c("Site_Genet","l10_Area_STA","Survival","Genus","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years","StartingDate","EndingDate")] 
+# ^ missing SiteInterval, N_t0, TransitionType, StartingDate","EndingDate. Needs to b3 added in code #2
+# Is this located in the packages code?
 surv_dat=subset(surv_dat,TransitionType!="RECR")
 names(surv_dat)=c("ColonyID","size","survival","Genus_Code","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years")
 
@@ -54,6 +56,7 @@ Name="Streamlined_VR_Models_"
 
 # Load Data to Get Proportion of "True" Recruitment ------------------------------------
 #Assign SFM Sites to Sectors 
+#CSV file not in github
 sitemd=read.csv("data/Thesis_Sites_Metadata2.csv");names(sitemd)[1]="Site";names(sitemd)[1]="Site";sitemd$EndingDate=mdy(sitemd$SampleDate.MM.DD.YYYY.)
 sitemd <- sitemd %>% dplyr::select(Site, Latitude, Longitude) #get 1 lat/long for each site
 sitemd <- distinct(sitemd)

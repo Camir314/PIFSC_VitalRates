@@ -1,3 +1,6 @@
+#Which file is the colonylevel dataframe being referenced?
+ColonyLevel <- read.csv("./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_CLEAN.csv") 
+ColonyLevel <- read.csv("./CSV files/ColonyTransitions/ASRAMP23_ColonyTransitions.csv")
 
   ################################################################################
   ######### Site + Interval Years + Genus models ###############################
@@ -92,7 +95,7 @@
   #length(which(is.na(subset(ColonyLevel,TransitionTypeSimple %in% c("GROWTH","SHRINK","MORT"))$log10_SS)))
   
   #To annualize survival:
-  #Fit logistic regression at Site-Interval-Genus scae. Use this model to predict estimated survival probability for each individual.
+  #Fit logistic regression at Site-Interval-Genus scale. Use this model to predict estimated survival probability for each individual.
   #Annualize survival probability (raise to 1/IntervalYears) and add to ColonyLevel dataframe
   #Use annualized survival probability to refit logistic models for aggregate regional models 
   #Run SIG models like normal using logistic regression
