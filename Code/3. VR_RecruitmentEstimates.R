@@ -66,6 +66,14 @@ ColTrans$SIS=paste0(substr(ColTrans$Site,1,3),substr(ColTrans$Site,9,11),"_",
 #Genus--> GENUS_CODE for simplicity later
 names(ColTrans)[which(names(ColTrans)=="Genus")]="GENUS_CODE"
 
+#There are 7 entries without GENUS_CODE, dropping them for now
+length(which(is.na(ColTrans$GENUS_CODE)))
+GenetNAList=ColTrans[which(is.na(ColTrans$GENUS_CODE)),"Site_Genet"]
+ColTrans %>% filter(Site_Genet%in%GenetNAList) # All singleton genets (RECR/MORT)
+#Drop ʻEM - 11/18 I asked Corinne to figure these out...
+ColTrans=ColTrans %>% filter(!Site_Genet%in%GenetNAList)
+
+
 #Report on Grouping
 Usig=unique(ColTrans$SIG)
 Usis=unique(ColTrans$SIS)
@@ -131,13 +139,13 @@ ggplot()+
   geom_vline(xintercept = 5)+
   theme_bw()+
   ggtitle("Proportion of juveniles compared to true recruits")+
-  labs(x="Diameter (cm)",color = "Legend")
+  labs(x="Diameter (cm)",color = "Legend")+scale_x_sqrt()
 #Notes here: Area is in m2, but inter-survey interval is _large_ (i.e. 5 years, so "true" recruits are really adult cols)
 
 #Check Proportion of Recruits per Taxon - hist calculation
 #Model Mesh Points
 
-binwidths=c(.01,.1,.25,.5)#bw
+binwidths=c(.1)#bw
 uG=c("SSSS","ACSP","POCS","POSP","MOSP")
 PropRec_g=cbind(expand.grid(GENUS_CODE=uG,BinWidth=binwidths),PropRec=NA)
 for(i_b in 1:length(binwidths)){
@@ -358,7 +366,7 @@ Jsec_P_Asec= rea_sec %>%
   filter(ANALYSIS_SEC%in%uSec&GENUS_CODE%in%c("SSSS","ACSP","MOSP","POSP","POCS")) %>% #filter by target taxa and target sectors (uSec is unique sector list from above)
   select(REGION,ISLAND,ANALYSIS_SEC,ANALYSIS_YEAR,GENUS_CODE,Mean_JuvColDen_cm2, SE_JuvColDen_cm2,N.JCD)%>%
   left_join(cov,by=c("REGION","ISLAND","ANALYSIS_SEC","GENUS_CODE","ANALYSIS_YEAR")) %>% 
-  left_join(PropRecMn,by=c("GENUS_CODE"="Genus")) %>%
+  left_join(PropRecMn,by=c("GENUS_CODE")) %>%
   group_by(REGION,ISLAND,ANALYSIS_SEC,ANALYSIS_YEAR,GENUS_CODE)%>%
   mutate(Mean_JuvColDenP=Mean_JuvColDen_cm2*meanPropRec,
          SE_JuvColDenP=SE_JuvColDen_cm2*meanPropRec,
@@ -379,7 +387,7 @@ Jsec_P_ALL= rea_sec %>%
   filter(GENUS_CODE%in%c("SSSS","ACSP","MOSP","POSP","POCS")) %>% #uSec is unique sector list from above
   select(REGION,ISLAND,ANALYSIS_SEC,ANALYSIS_YEAR,GENUS_CODE,Mean_JuvColDen_cm2, SE_JuvColDen_cm2,N.JCD)%>%
   left_join(cov,by=c("REGION","ISLAND","ANALYSIS_SEC","GENUS_CODE","ANALYSIS_YEAR")) %>% 
-  left_join(PropRecMn,by=c("GENUS_CODE"="Genus")) %>%
+  left_join(PropRecMn,by=c("GENUS_CODE")) %>%
   group_by(REGION,ISLAND,ANALYSIS_SEC,ANALYSIS_YEAR,GENUS_CODE)%>%
   mutate(Mean_JuvColDenP=Mean_JuvColDen_cm2*meanPropRec,
          SE_JuvColDenP=SE_JuvColDen_cm2*meanPropRec,
