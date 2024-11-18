@@ -39,15 +39,9 @@ ColTrans=ColTrans %>%
   )
 
 #Prepping surv_dat output
-<<<<<<< HEAD
 survnames=c("Site_Genet","l10_Area_STA","Survival","Genus","Interval","SiteInterval","Site","N_t0",
             "TransitionType","Interval_Years","StartingDate","EndingDate")
 surv_dat=ColTrans[,survnames]
-=======
-surv_dat=ColTrans[,c("Site_Genet","l10_Area_STA","Survival","Genus","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years","StartingDate","EndingDate")] 
-# ^ missing SiteInterval, N_t0, TransitionType, StartingDate","EndingDate. Needs to b3 added in code #2
-# Is this located in the packages code?
->>>>>>> 4c260ae266e42f9c70b6d982ce434afcaec0d1e1
 surv_dat=subset(surv_dat,TransitionType!="RECR")
 
 # Change these file names when saving data to reflect the new changes
@@ -82,19 +76,11 @@ Name="MA_AS_Models"
 
 # Load Data to Get Proportion of "True" Recruitment ------------------------------------
 #Assign SFM Sites to Sectors 
-<<<<<<< HEAD
 sitemd=read.csv("./data/MetaData/VitalRates_LatLong.csv");
 sitemd=sitemd %>% rename(Site=ESD.Site.Name)
 # names(sitemd)[1]="Site";names(sitemd)[1]="Site";sitemd$EndingDate=mdy(sitemd$SampleDate.MM.DD.YYYY.)
 # sitemd <- sitemd %>% dplyr::select(Site, Latitude, Longitude) #get 1 lat/long for each site
 # sitemd <- distinct(sitemd)
-=======
-#CSV file not in github
-sitemd=read.csv("data/Thesis_Sites_Metadata2.csv");names(sitemd)[1]="Site";names(sitemd)[1]="Site";sitemd$EndingDate=mdy(sitemd$SampleDate.MM.DD.YYYY.)
-sitemd <- sitemd %>% dplyr::select(Site, Latitude, Longitude) #get 1 lat/long for each site
-sitemd <- distinct(sitemd)
->>>>>>> 4c260ae266e42f9c70b6d982ce434afcaec0d1e1
-#sitemd=sitemd %>% group_by(Site) %>% summarize(Lat=mean(Latitude),Lon=mean(Longitude))
 
 #Reassign OAH_XX_022 to OAH_OCC_005
 #ColTrans$Site[which(ColTrans$Site=="OAH_XXX_022")]="OAH_OCC_005"
