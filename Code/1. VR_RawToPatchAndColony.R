@@ -15,16 +15,20 @@ library(sp)
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
 
-# raw <- read.csv("./CSV files/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
-raw <- read.csv("./CSV files/RawData/MARAMP22_VitalRates_06-24-2024.csv")
+raw <- read.csv("./CSV files/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
+# raw <- read.csv("./CSV files/RawData/MARAMP22_VitalRates_06-24-2024.csv")
 ll <- read.csv("./CSV files/MetaData/VitalRates_LatLong.csv")
 effort <- read.csv("./CSV files/MetaData/VitalRates_SurveyEffort.csv")
 
 #### QC Data ####
 ## (OPTIONAL) Remove superfluous columns:
 colnames(raw)
-raw <- raw %>% select(-c(OID_, TL_SurfA, TL_Note))
+raw <- raw %>% select(-c(OID_, TL_SurfA))
 
+
+# Change some column names
+raw <- raw %>% rename("Surface_Area" = "SArea")
+                      
 
 ## Look for potential issues in the data:
 lapply(raw, unique)
@@ -124,7 +128,7 @@ head(vr)
 #### Consolidate into colony dataframe ####
 
 # Create colony dataframe:
-vr_col <- vr %>% dplyr::select(Genet_full, TL_Area, TL_Perim, Shape_Leng, Shape_Area, SArea, area_perim) 
+vr_col <- vr %>% dplyr::select(Genet_full, TL_Area, TL_Perim, Shape_Leng, Shape_Area, Surface_Area, area_perim) 
 vr_meta <- vr %>% dplyr::select(Genet_full, Island, Region, Site, TimePt, Year, TL_Date, Latitude,Longitude,
                                 Genus, TL_Class, TL_Genet, Quadrat, Effort) %>%
   distinct()
@@ -146,21 +150,18 @@ vr_col <- left_join(vr_col, a)
 #### Format dataframe into archive csv file ####
 # Add in Island_Code, DataorError, Error_Category
 archive <- vr_col
-colnames(vr)
-head(archive)
 
-archive <- archive %>% filter(Genus != "MOSP") # Remove MOSP because prevalence is too low
+# archive <- archive %>% filter(Genus != "MOSP") # Remove MARAMP22 MOSP because prevalence is too low
 
 
 # Remove colonies <19cm2 in all time points
-AdSize=(2.5^2*pi) 
 `%notin%` <- Negate(`%in%`) 
 
-t0 <- vr_col %>% filter(Year == "2014" & TL_Area < AdSize & Shape_Area < .0019) %>% 
+t0 <- vr_col %>% filter(Year == "2017" & Shape_Area < .0019) %>% 
   dplyr::select(c(Site, Genus, TL_Genet, Site_Genet))
-t1 <- vr_col %>% filter(Year == "2017" & TL_Area < AdSize & Shape_Area < .0019) %>% 
+t1 <- vr_col %>% filter(Year == "2018" & Shape_Area < .0019) %>% 
   dplyr::select(c(Site, Genus, TL_Genet, Site_Genet)) 
-t2 <- vr_col %>% filter(Year == "2022" & TL_Area < AdSize & Shape_Area < .0019) %>% 
+t2 <- vr_col %>% filter(Year == "2023" & Shape_Area < .0019) %>% 
   dplyr::select(c(Site, Genus, TL_Genet, Site_Genet))
 
 step1 <- inner_join(t0,t1)
@@ -195,17 +196,18 @@ archive <- archive %>% mutate(Genus = case_when(Genus_Code == "POSP" ~ "Porites 
                                                 Genus_Code == "MOSP" ~ "Montipora sp.",
                                                 Genus_Code == "POCS" ~ "Pocillopora sp.",
                                                 Genus_Code == "ACSP" ~ "Acropora sp."))
-archive <- rename(archive, "Spec_Code" = "TL_Class")
-archive <- rename(archive, "Date" = "TL_Date")
-archive <- rename(archive, "ColonyName" = "Genet_full")
-archive <- rename(archive, "Shape_Length" = "Shape_Leng")
+archive <- archive %>% rename("Spec_Code" = "TL_Class",
+                              "Date" = "TL_Date",
+                              "ColonyName" = "Genet_full",
+                              "Shape_Length" = "Shape_Leng")
+archive <- archive %>% select(-c("TL_Area","TL_Perim"))
 
 # archive <- archive %>% dplyr::select(-c(TL_Genet, TL_Area, TL_Perim,  
 #                                         Quadrat, TimePt, area_perim))
 
 archive <- archive %>% dplyr::select(Site, Island, Island_Code, Latitude, Longitude, Date, 
                                      DataorError, Error_Category, ColonyName, Spec_Code, Genus,
-                                     Genus_Code, Shape_Length, Shape_Area)
+                                     Genus_Code, Shape_Length, Shape_Area, Surface_Area, nPatches)
 
 head(archive)
 
@@ -215,4 +217,4 @@ head(archive)
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
 write.csv(vr,"./CSV files/PatchLevel/MARAMP22_VitalRates_patchlevel_CLEAN.csv",row.names = F)
 write.csv(vr_col,"./CSV files/ColonyLevel/MARAMP22_VitalRates_colonylevel_CLEAN.csv",row.names = F)
-write.csv(archive,"./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_archive.csv",row.names = F)
+write.csv(archive,"./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_InportArchive.csv",row.names = F)
