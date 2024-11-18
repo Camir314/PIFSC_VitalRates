@@ -1,0 +1,17 @@
+Dataset,Download,Frequency,URL,Dataset_ID,Fields,Summaries,Mask
+Degree_Heating_Weeks_CRW_Daily,YES,Daily,https://oceanwatch.pifsc.noaa.gov/erddap/,CRW_dhw_v1_0,degree_heating_week,DHW.Np10y;DHW.Np10y_Major;DHW.MeanMax;DHW.MeanMax_Major;DHW.CI95Max;DHW.CI95Max_Major;DHW.MeanDur;DHW.MeanDur_Major;DHW.MaxMax;DHW.MaxMax_Major;DHW.YearsToLast;DHW.YearsToLast_Major,FALSE
+Sea_Surface_Temperature_CRW_Daily,YES,Daily,https://coastwatch.pfeg.noaa.gov/erddap/,NOAA_DHW,CRW_SST,mean;q05;q95;sd,FALSE
+Chlorophyll_A_ESA_OC_CCI_v6.0_8Day,YES,8day,https://coastwatch.pfeg.noaa.gov/erddap/,pmlEsaCCI60OceanColor8Day,chlor_a,mean;q05;q95;sd,TRUE
+PAR_NASA_VIIRS_8Day,YES,8day,https://coastwatch.pfeg.noaa.gov/erddap/,erdVH2018par8day,par,mean;q05;q95;sd,TRUE
+KdPAR_NOAA_VIIRS_Weekly,YES,Weekly,https://coastwatch.pfeg.noaa.gov/erddap/,nesdisVHNSQkdparWeekly,kd_par,mean;q05;q95;sd,TRUE
+Chlorophyll_A_NPP_VIIRS_Monthly,YES,Monthly,https://oceanwatch.pifsc.noaa.gov/erddap/,noaa_snpp_chla_monthly_750m_v2023,chlor_a,mean;q05;q95;sd,TRUE
+Kd490_NOAA_VIIRS_Weekly,YES,Weekly,https://coastwatch.pfeg.noaa.gov/erddap/,nesdisVHNSQkd490Weekly,kd_490,mean;q05;q95;sd,TRUE
+Marine_Heatwave_CRW_Daily,YES,Daily,https://pae-paha.pacioos.hawaii.edu/erddap/,mhw_5km,heatwave_category,mean;q05;q95;sd,FALSE
+Mixed_Layer_Depth_GODAS_Monthly,YES,Monthly,https://apdrc.soest.hawaii.edu/erddap/,hawaii_soest_13c5_96ef_e443,dbssbmxl,mean;q05;q95;sd,FALSE
+PAR_Aqua_MODIS_8Day,YES,8day,https://coastwatch.pfeg.noaa.gov/erddap/,erdMH1par08day,par,mean;q05;q95;sd,TRUE
+Precipitation_CHIRPS_Daily,YES,Daily,https://coastwatch.pfeg.noaa.gov/erddap/,chirps20GlobalDailyP05,precip,mean;q05;q95;sd,FALSE
+Precipitation_TRMM_Daily,YES,Daily,https://oceanwatch.pifsc.noaa.gov/erddap/,hawaii_soest_5687_3d16_a6d4,precipitation,mean;q05;q95;sd,FALSE
+Bathymetry_SRTM15,YES,Climatology,https://coastwatch.pfeg.noaa.gov/erddap/,srtm15plus,z,NA,FALSE
+Bathymetry_NOAA_NCEI_Guam_10m,YES,Climatology,https://pae-paha.pacioos.hawaii.edu/erddap/,ngdc_bathy_10m_guam,elev,NA,FALSE
+Wave_Height_Monthly,YES,Monthly,https://chapman.ceoas.oregonstate.edu/erddap/,Wavewatch3_SigWavHgt_Monthly,monthly_mean_whgt,mean;q05;q95;sd,FALSE
+Wind_Speed_NCEI_Daily,YES,Daily,https://coastwatch.noaa.gov/erddap/,noaacwBlendedWindsDaily,windspeed,mean;q05;q95;sd,FALSE
