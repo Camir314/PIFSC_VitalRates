@@ -64,7 +64,7 @@ ColTrans$SIS=paste0(substr(ColTrans$Site,1,3),substr(ColTrans$Site,9,11),"_",
                     substr(year(ColTrans$EndingDate),3,4),leadz(month(ColTrans$EndingDate),2),"_",
                     ColTrans$Spec_Code)
 #Genus--> GENUS_CODE for simplicity later
-names(ColTrans)[which(names(ColTrans)=="Genus")]="GENUS_CODE"
+ColTrans=ColTrans %>% rename(GENUS_CODE=Genus)
 
 #There are 7 entries without GENUS_CODE, dropping them for now
 length(which(is.na(ColTrans$GENUS_CODE)))
@@ -114,16 +114,17 @@ secshp=st_make_valid(secshp)
 valid = st_is_valid(secshp);inval=which(!valid);print(inval)
 
 CL.sf = CL.sf %>% st_set_crs(value = st_crs(secshp)) #retrieve coordinate system
-Site2Sec=st_join(CL.sf,secshp[,"SEC_NAME"])
+Site2Sec=st_join(CL.sf,secshp[,c("SEC_NAME","Region")])
 
 #Add Sector to ColTrans dataframe!
-Site2Sec_ONLY=unique(st_drop_geometry(Site2Sec)[,c("Site","SEC_NAME")])
+Site2Sec_ONLY=unique(st_drop_geometry(Site2Sec)[,c("Site","SEC_NAME","Region")])
 # Site2Sec_ONLY$SEC_NAME[Site2Sec_ONLY$Site=="FFS_OCC_002"]="French Frigate"
 # Site2Sec_ONLY$SEC_NAME[Site2Sec_ONLY$Site=="FFS_OCC_014"]="French Frigate"
 # Site2Sec_ONLY$SEC_NAME[Site2Sec_ONLY$Site=="HAW_OCC_003"]="HAW_PUNA"
 # Site2Sec_ONLY$SEC_NAME[Site2Sec_ONLY$Site=="HAW_SIO_K08"]="HAW_KONA"
 
-ColTrans=ColTrans %>% left_join(Site2Sec_ONLY[,c("Site","SEC_NAME")],by="Site")
+ColTrans=ColTrans %>% left_join(Site2Sec_ONLY[,c("Site","SEC_NAME","Region")],by="Site")
+ColTrans=ColTrans %>% rename(REGION=Region)
 save(ColTrans, file="data/Colony_Data_MA_AS_20241112_edited.rdata")
 
 
@@ -205,63 +206,62 @@ PropRecMn
 
 #Case 1: Assume Site-Level Stock-Recruitment
 # 
-# #Area Surveyed for each SIG
-# #Asurv=read.csv("./data/AreaSurveyed_N_Circrats.csv"); names(Asurv)[1]="Site"
-# #Asurv$Site[Asurv$Site=="OAH_XXX_022"]="OAH_OCC_005"
-# #Asurv$EndingDate=mdy(Asurv$Date)
-# # Asurv_l=Asurv[,c("Site","EndingDate","POCS","POSP","MOSP")]%>%
-# #   pivot_longer(cols=c("POSP","MOSP","POCS"),names_to=c("Genus"),values_to=c("Ncircrats")) %>% 
-# #   mutate(Ncircrats=as.numeric(Ncircrats))
-# # Asurv_l$A.Surv.m2 =Asurv_l$Ncircrats*0.5 #numb of circrats * 0.5m2 (size of circrat) to get area surveyed in m2
-# # Asurv_l$A.Surv.cm2 = Asurv_l$Ncircrats*5000 #area surveyed cm2
-# Asurv_l=read.csv("./data/MetaData/VitalRates_SurveyEffort.csv"); #names(Asurv)[1]="Site"
-# Asurv_l=Asurv_l %>% rename(A.Surv.m2=Effort) %>% mutate(A.Surv.cm2=10^4*A.Surv.m2)
-# 
-# #Area of Adult Colonies for each SIG
-# Atax=ColTrans %>%
-#   group_by(SIG,Site,Interval,Genus,StartingDate,EndingDate,Interval_Years) %>% 
-#   summarise(AdultCoralArea_cm2=sum(Shape_Area_STAcm2)) #Area of adult cm2 = sum all corals in each genus for each year
-# 
-# #Link to Nrecruits from the Shape_Area_STAcm2 summed area: Adults at beginning of interval generate 
-# RecSFMTib=ColTrans %>%
-#   filter(TransitionType %in% c("RECR")) %>% 
-#   group_by(SEC_NAME,SIG,Site,Interval,Genus,REGION,StartingDate,EndingDate,Interval_Years) %>% 
-#   summarize(Nrec=length(which(TransitionType=="RECR"))) %>% 
-#   left_join(Atax) %>% 
-#   left_join(Asurv_l) %>% 
-#   mutate(
-#     # numb recruits/area surveyed cm2
-#     RecSFM_p_Survcm2=Nrec/A.Surv.cm2,
-#     #Case 1: Assume Site-Level Stock-Recruitment
-#     #Recruit N per adult area and annual rate
-#     RecSFM_p_SiteAdcm2=Nrec/AdultCoralArea_cm2,
-#     RecSFM_p_SiteAdcm2_Yr=RecSFM_p_SiteAdcm2/Interval_Years) # numb recruits/total adult area cm2 annualized
-# 
-# RecSFMDataFrame=as.data.frame(RecSFMTib)
-# 
-# #save(RecSFMDataFrame, file = paste0("data/",Name,"_RecSFMrates.rdata"))
-# 
-# #plot
-# hist(RecSFMDataFrame$RecSFM_p_SiteAdcm2_Yr, breaks = 20)
-# 
-# 
-# #REGIONAL CALCULATIONS BY GENUS AND REGION
-# RecSFMDataFrame$RecSFM_p_SiteAdcm2_Yr[RecSFMDataFrame$RecSFM_p_SiteAdcm2_Yr == Inf] <-NA
-# #Calculate median, mean, and lower/upper quantiles for site-level stock recruitment GENUS values
-# RecSFMSummary=RecSFMDataFrame %>%
-#   dplyr::select(SEC_NAME,Site,Interval,Genus,REGION,RecSFM_p_SiteAdcm2_Yr)%>%
-#   group_by(Genus,REGION)%>%
-#   summarise(SiteStock_median = median(RecSFM_p_SiteAdcm2_Yr, na.rm = TRUE),
-#             SiteStock_mean = mean(RecSFM_p_SiteAdcm2_Yr, na.rm = TRUE),
-#             SiteStock_q05= quantile(RecSFM_p_SiteAdcm2_Yr, c(0.05),na.rm = TRUE),
-#             SiteStock_q95= quantile(RecSFM_p_SiteAdcm2_Yr, c(0.95),na.rm = TRUE)
-#   )
-# 
-# 
-# 
-# 
-# #REA Observed Recruitment Rates per adult cover, at Sector and Site Level, 
-# #with SIG matching site-level data grouped at sector containing SIG
+#Area Surveyed for each SIG
+#Asurv=read.csv("./data/AreaSurveyed_N_Circrats.csv"); names(Asurv)[1]="Site"
+#Asurv$Site[Asurv$Site=="OAH_XXX_022"]="OAH_OCC_005"
+#Asurv$EndingDate=mdy(Asurv$Date)
+# Asurv_l=Asurv[,c("Site","EndingDate","POCS","POSP","MOSP")]%>%
+#   pivot_longer(cols=c("POSP","MOSP","POCS"),names_to=c("Genus"),values_to=c("Ncircrats")) %>%
+#   mutate(Ncircrats=as.numeric(Ncircrats))
+# Asurv_l$A.Surv.m2 =Asurv_l$Ncircrats*0.5 #numb of circrats * 0.5m2 (size of circrat) to get area surveyed in m2
+# Asurv_l$A.Surv.cm2 = Asurv_l$Ncircrats*5000 #area surveyed cm2
+Asurv_l=read.csv("./data/MetaData/VitalRates_SurveyEffort.csv"); #names(Asurv)[1]="Site"
+Asurv_l=Asurv_l %>% rename(A.Surv.m2=Effort,GENUS_CODE=Genus) %>% mutate(A.Surv.cm2=10^4*A.Surv.m2)
+
+#Area of Adult Colonies for each SIG
+Atax=ColTrans %>%
+  group_by(SIG,Site,Interval,GENUS_CODE,StartingDate,EndingDate,Interval_Years) %>%
+  summarise(AdultCoralArea_cm2=sum(Shape_Area_STAcm2)) #Area of adult cm2 = sum all corals in each genus for each year
+
+#Link to Nrecruits from the Shape_Area_STAcm2 summed area: Adults at beginning of interval generate
+RecSFMTib=ColTrans %>%
+  filter(TransitionType %in% c("RECR")) %>%
+  group_by(REGION,Island,SEC_NAME,Site,Interval,GENUS_CODE,SIG,StartingDate,EndingDate,Interval_Years) %>%
+  summarize(Nrec=length(which(TransitionType=="RECR"))) %>%
+  left_join(Atax,by=c("Site","Interval","GENUS_CODE","SIG","StartingDate","EndingDate","Interval_Years")) %>%
+  left_join(Asurv_l,by=c("Island","Site","GENUS_CODE")) %>%
+  mutate(
+    # numb recruits/area surveyed cm2
+    RecSFM_p_Survcm2=Nrec/A.Surv.cm2,
+    #Case 1: Assume Site-Level Stock-Recruitment
+    #Recruit N per adult area and annual rate
+    RecSFM_p_SiteAdcm2=Nrec/AdultCoralArea_cm2,
+    RecSFM_p_SiteAdcm2_Yr=RecSFM_p_SiteAdcm2/Interval_Years) # numb recruits/total adult area cm2 annualized
+
+RecSFMDataFrame=as.data.frame(RecSFMTib)
+
+#save(RecSFMDataFrame, file = paste0("data/",Name,"_RecSFMrates.rdata"))
+
+#plot
+hist(RecSFMDataFrame$RecSFM_p_SiteAdcm2_Yr, breaks = 20)
+
+
+#REGIONAL CALCULATIONS BY GENUS AND REGION
+RecSFMDataFrame$RecSFM_p_SiteAdcm2_Yr[RecSFMDataFrame$RecSFM_p_SiteAdcm2_Yr == Inf] <-NA
+#Calculate median, mean, and lower/upper quantiles for site-level stock recruitment GENUS values
+RecSFMSummary=RecSFMDataFrame %>%
+  dplyr::select(SEC_NAME,Site,Interval,GENUS_CODE,REGION,RecSFM_p_SiteAdcm2_Yr)%>%
+  group_by(GENUS_CODE,REGION)%>%
+  summarise(SiteStock_median = median(RecSFM_p_SiteAdcm2_Yr, na.rm = TRUE),
+            SiteStock_mean = mean(RecSFM_p_SiteAdcm2_Yr, na.rm = TRUE),
+            SiteStock_q05= quantile(RecSFM_p_SiteAdcm2_Yr, c(0.05),na.rm = TRUE),
+            SiteStock_q95= quantile(RecSFM_p_SiteAdcm2_Yr, c(0.95),na.rm = TRUE)
+  )
+
+
+
+#REA Observed Recruitment Rates per adult cover, at Sector and Site Level,
+#with SIG matching site-level data grouped at sector containing SIG
 
 #Case 2: Assum Sector-Level Stock-Recruitment
 #Site Recruitment, Sector Stock
@@ -428,22 +428,26 @@ Jsec_P_ALL %>% filter(ISLAND%in%Jsec_P_Asec$ISLAND) %>% #filter(ISLAND%in%c("Haw
   scale_x_sqrt()
 
 #plot site-level stock recruitment values and sector-level stock recruitment values
+bw=0.01
+recvals=c(Jsec_P_ALL$MN.RecVal,RecSFMDataFrame$RecSFM_p_SiteAdcm2_Yr);recvals[is.infinite(recvals)]=NA
+xbnds=c(-2*bw,max(recvals,na.rm=T))
 Site=ggplot(RecSFMDataFrame,aes(RecSFM_p_SiteAdcm2_Yr))+
-  geom_histogram()+ theme_bw()+
-  facet_grid("Genus")+
+  geom_histogram(binwidth=bw)+ theme_bw()+
+  facet_grid("GENUS_CODE")+
   #facet_wrap(Genus~REGION)+
-  xlim(c(0,.12)) + xlab("Site-level stock recruitment") # "# recruits  / area adult coral"
+  xlim(xbnds)+scale_x_sqrt()+
+  xlab("Site-level stock recruitment") # "# recruits  / area adult coral"
 
 Sec= Jsec_P_Asec%>%
   filter(GENUS_CODE%in%c("ACSP","MOSP","POSP","POCS")) %>%
   ggplot(aes(MN.RecVal))+
-  geom_histogram()+theme_bw()+
+  geom_histogram(binwidth=bw)+theme_bw()+
   facet_grid("GENUS_CODE")+
   #facet_wrap(Genus~REGION)+
-  xlim(c(0,.12))+ xlab("Proportional sector-level stock recruitment") # "Proportional juv. colony density / cover"
+  xlim(xbnds)+scale_x_sqrt()+
+  xlab("Proportional sector-level stock recruitment") # "Proportional juv. colony density / cover"
 
 Site/Sec
-
 
 #Sector Stock Rec for REGIONAL MODEL
 Regional_SectorStockRec <- as.data.frame(Jsec_P_Asec) 
@@ -465,3 +469,10 @@ Regional_SectorStockRec[Regional_SectorStockRec<0] = 0
 
 #Include Sec_All values in Regional sector stock
 Regional_SectorStockRec <- left_join(Regional_SectorStockRec,RecVal_Sec_Dists, by= c("GENUS_CODE","REGION"))
+
+ColTrans
+
+#Output Data.Frames to continue
+save(list=c("Site2Sec_ONLY","ColTrans","RecSFMDataFrame","RecSFMSummary","Regional_SectorStockRec","Jsec_P_Asec","Jsec_P_ALL"),
+     file = "./Data/ColonyTransitions/Script_Step3_DataPackage.rdata")
+
