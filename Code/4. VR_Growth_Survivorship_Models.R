@@ -206,8 +206,8 @@ AnnSurvTib=ColTrans %>%
   unnest(c(data,s.N,s.ssRange,s.int,s.slp,s.pR2,s.AUC,s.AIC,SurvProbs)) %>% 
   select_if(negate(is.list)) %>% 
   mutate(
-    #Models to drop AUC == 1 or AUC < 0.55 or SIG without any mort/surv differences
-    s.BadModel=ifelse((is.na(s.AUC)|(s.AUC<0.55)|(s.AUC==1)),TRUE,FALSE),
+    #Models to drop AUC == 1 or AUC < 0.50 or SIG without any mort/surv differences
+    s.BadModel=ifelse((is.na(s.AUC)|(s.AUC<0.50)|(s.AUC==1)),TRUE,FALSE),
   )
 AnnSurvTib$AnnSurvProbs=AnnSurvTib$SurvProbs^(1/AnnSurvTib$Interval_Years)
 options(warn = wo)
@@ -231,15 +231,20 @@ options(warn = wo)
 #   facet_wrap("SIG")+theme_bw()
 
 
-ColTrans_ap=left_join(ColTrans,AnnSurvTib[,c("SIG","Site_Genet","s.N","s.AUC","s.BadModel","AnnSurvProbs")])
+ColTrans=left_join(ColTrans,AnnSurvTib[,c("SIG","Site_Genet","s.N","s.AUC","s.BadModel","AnnSurvProbs")])
+ColTrans=ColTrans %>% 
+  mutate(TransitionMagnitudecm2=Shape_Area_ENDcm2-Shape_Area_STAcm2,
+         LinearExtension.cm=TransitionMagnitudecm2/Shape_Leng_STAcm,
+         AnnualLinearExtension.cm=LinearExtension.cm/Interval_Years)
+save(list = "ColTrans",file="./Data/ColonyTransitions/HA_MA_AS_ColonyTransition_withAnnSurv.rdata")
 
-ColTrans_ap %>% filter(s.BadModel==TRUE) %>%
+ColTrans %>% filter(s.BadModel==TRUE) %>%
   ggplot(aes(x=log10_SS,y=AnnSurvProbs,fill=Site,size=s.N))+
   geom_point(shape=21,color="white")+
   facet_grid(REGION~GENUS_CODE)
 
 ### JUST REGIONAL by Genus
-RegionalAnnSurvTib=ColTrans_ap %>% 
+RegionalAnnSurvTib=ColTrans %>% 
   filter(TransitionType %in% c("GROW","MORT")&!is.na(log10_SS)) %>% 
   filter(s.BadModel==FALSE) %>% 
   group_by(GENUS_CODE,REGION) %>% 
@@ -295,10 +300,15 @@ head(SurvDataFrame)
 save(SurvDataFrame, file = sprintf("./Data/ModelData/%s_Smodfits.rdata", Name))
 
 #compare regional vs SIG slope/int
-ggplot()+
+GrowthPlot=ggplot()+
+  geom_point(aes(pg.int,pg.slp,size=log10(pg.N),fill=REGION),alpha=.5,shape=23,data=subset(PlanarGrowthDataFrame,pg.BadModel==FALSE))+
+  geom_point(aes(pg.int,pg.slp,size=log10(pg.N),fill=REGION),shape=21,data=PlanarGrowthRegionalDF)+
+  facet_grid(~GENUS_CODE)
+SurvPlot=ggplot()+
   geom_point(aes(s.int,s.slp,size=log10(s.N),fill=REGION),alpha=.5,shape=23,data=subset(SurvDataFrame,s.BadModel==FALSE))+
   geom_point(aes(s.int,s.slp,size=log10(s.N),fill=REGION),shape=21,data=RegionalAnnSurvDataFrame)+
-  facet_wrap(~GENUS_CODE)
+  facet_grid(~GENUS_CODE)
+GrowthPlot/SurvPlot
 
 ################################################################################
 ######### Site + Interval Years + Genus models #################################
@@ -311,7 +321,7 @@ RegLU=c("NWHI","MHI","NWHI","NWHI","MHI","MHI","NWHI","MARIAN","PRIAs","MARIAN",
 names(RegLU)=c("FFS","HAW","KUR","LIS","MAI","OAH","PHR","ASC","BAK", "GUA", "HOW", "MAU", "OFU", "PAG", "ROS", "SAI", "TAU", "TUT")
 
 #SIG models
-combo <- left_join(PlanarGrowthDataFrame,SurvDataFrame)#)left_join(SAGrowthDataFrame,
+combo <- left_join(PlanarGrowthDataFrame,SurvDataFrame)
 save(combo, file = sprintf("./Data/ModelData/%s_allmodfits.rdata",Name))
 table(combo$pg.BadModel,combo$s.BadModel)
 no_NAs <- combo %>% filter(pg.BadModel==FALSE&s.BadModel==FALSE)
@@ -320,7 +330,7 @@ GrowthSurv_SIG <- data.frame()
 
 GrowthSurv_SIG <- no_NAs[order(no_NAs$Site),]
 GrowthSurv_SIG$StartingYear=as.numeric(year(GrowthSurv_SIG$StartingDate))
-GrowthSurv_SIG$SEC_NAME#=Site2Sec_ONLY[match(GrowthSurv_SIG$Site,Site2Sec_ONLY$Site),"SEC_NAME"]
+#GrowthSurv_SIG$SEC_NAME#=Site2Sec_ONLY[match(GrowthSurv_SIG$Site,Site2Sec_ONLY$Site),"SEC_NAME"]
 
 #sort(table(GrowthSurv_SIG$Site,GrowthSurv_SIG$GENUS_CODE,GrowthSurv_SIG$StartingYear))
 
@@ -328,6 +338,7 @@ GrowthSurv_SIG$SEC_NAME#=Site2Sec_ONLY[match(GrowthSurv_SIG$Site,Site2Sec_ONLY$S
 GrowthSurvRec_SIG = left_join(GrowthSurv_SIG,
                               RecSFMDataFrame[,c("Site","GENUS_CODE","EndingDate","Nrec","RecSFM_p_SiteAdcm2_Yr")],
                               by=c("Site","GENUS_CODE","StartingDate"="EndingDate"))
+#View(GrowthSurvRec_SIG[,c("SIG","StartingDate","RecSFM_p_SiteAdcm2_Yr")])
 
 #add REA sector-level stock recruitment data
 #Tweak ANALYSIS YEAR values to match recruit data
@@ -343,6 +354,9 @@ GrowthSurvRec_SIG$ANALYSIS_YEAR[which(GrowthSurvRec_SIG$ANALYSIS_YEAR%in%c("2017
 ModelParams_SIG= left_join(GrowthSurvRec_SIG,
                            Jsec_P_Asec[,c("ANALYSIS_SEC","GENUS_CODE","ANALYSIS_YEAR","N.RecVal","MN.RecVal","LOW_CI95.RecVal","HIGH_CI95.RecVal")],
                            by=c("SEC_NAME"="ANALYSIS_SEC","GENUS_CODE","ANALYSIS_YEAR"))
+
+ModelParams_SIG[,c("SIG","SEC_NAME","MN.RecVal")] %>% filter(is.na(MN.RecVal))
+
 ModelParams_SIG= ModelParams_SIG %>% rename(
   N.Rec_Site=Nrec,
   MN.RecVal_Site=RecSFM_p_SiteAdcm2_Yr,
@@ -351,12 +365,8 @@ ModelParams_SIG= ModelParams_SIG %>% rename(
   LOW_CI95.RecVal_Sec=LOW_CI95.RecVal,
   HIGH_CI95.RecVal_Sec=HIGH_CI95.RecVal
 )
-# names(ModelParams_SIG)[which(names(ModelParams_SIG)=="Nrec")]="N.Rec_Site"
-# names(ModelParams_SIG)[which(names(ModelParams_SIG)=="RecSFM_p_SiteAdcm2_Yr")]="MN.RecVal_Site"
-# names(ModelParams_SIG)[which(names(ModelParams_SIG)=="N.RecVal")]="N.RecVal_Sec"
-# names(ModelParams_SIG)[which(names(ModelParams_SIG)=="MN.RecVal")]="MN.RecVal_Sec"
-# names(ModelParams_SIG)[which(names(ModelParams_SIG)=="LOW_CI95.RecVal")]="LOW_CI95.RecVal_Sec"
-# names(ModelParams_SIG)[which(names(ModelParams_SIG)=="HIGH_CI95.RecVal")]="HIGH_CI95.RecVal_Sec"
+
+
 #add SSSS (Scleractinia) sector rec values
 Rec_SSSS=subset(Jsec_P_Asec,GENUS_CODE=="SSSS")
 names(Rec_SSSS)[21:26]=paste0(names(Rec_SSSS)[21:26],"_Sec_SSSS")
@@ -369,7 +379,7 @@ ModelParams_SIG= left_join(ModelParams_SIG,
 ModelParams_SIG= left_join(ModelParams_SIG,
                            RecVal_Sec_Dists[,c("REGION","GENUS_CODE",
                                                "MD.RecVal_Sec_All","MD.CI95_LO.RecVal_Sec_All","MD.CI95_HI.RecVal_Sec_All")],
-                           by=c("REGION"="REGION","GENUS_CODE"="GENUS_CODE"))
+                           by=c("REGION","GENUS_CODE"))
 
 table(!is.na(ModelParams_SIG$MN.RecVal_Site))
 table(!is.na(ModelParams_SIG$MN.RecVal_Sec))
@@ -380,9 +390,18 @@ table(!is.na(ModelParams_SIG$MD.RecVal_Sec_All))
 # write.csv(Jsec_P_Asec,file = "./Data/ModelData/HAMAAS_Sector_Recruits_REA.csv")
 # write.csv(ModelParams_SIG,file = "./Data/ModelData/HAMAAS_ModelParams_SIG.csv")
 
-# Two values of Site Level not matching!!!!
 
-#save(ModelParams_SIG, file = sprintf("./Data/ModelData/%s_allmodfits_noNAs.rdata",Name))
+
+ModelParams_SIG=
+  ModelParams_SIG %>%
+    mutate(SecRecVal=coalesce(MN.RecVal_Sec,MN.RecVal_Sec_SSSS,MD.RecVal_Sec_All),
+           SecRecValSourceS=ifelse(SecRecVal==MN.RecVal_Sec,"SEC","NA"),
+           SecRecValSourceSS=ifelse(SecRecVal==MN.RecVal_Sec_SSSS,"SEC_SSSS","NA"),
+           SecRecValSourceALL=ifelse(SecRecVal==MD.RecVal_Sec_All,"SEC_REG","NA"),
+           SecRecValSource=coalesce(SecRecValSourceS,SecRecValSourceSS,SecRecValSourceALL)
+    ) %>% select(!c(SecRecValSourceS,SecRecValSourceSS,SecRecValSourceALL))
+      
+save(ModelParams_SIG, file = sprintf("./Data/ModelData/%s_allmodfits_noNAs.rdata",Name))
 
 ModelParams_SIG %>% 
   group_by(Site,Interval) %>% 
@@ -407,7 +426,7 @@ ModelParams_Regional = left_join(combo_regional,RecSFMSummary, by= c("GENUS_CODE
 #add REA sector-level stock recruitment data
 ModelParams_Regional = left_join(ModelParams_Regional,Regional_SectorStockRec,by=c("GENUS_CODE"="GENUS_CODE","REGION"))
 
-#save(ModelParams_Regional, file = sprintf("./Data/ModelData/%s_RegionalModFits_noBADs.rdata",Name))
+save(ModelParams_Regional, file = sprintf("./Data/ModelData/%s_RegionalModFits_noBADs.rdata",Name))
 
 
 

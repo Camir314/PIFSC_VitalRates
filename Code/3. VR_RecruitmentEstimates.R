@@ -73,7 +73,13 @@ D2A=function(D){return((D/2)^2*pi)}
 # #Drop ʻEM - 11/18 I asked Corinne to figure these out...
 # ColTrans=ColTrans %>% filter(!Site_Genet%in%GenetNAList)
 
-ColTrans=read.csv("./Data/ColonyTransitions/FULLDOMAIN_19.22.23_ColonyTransitions.csv")
+# ColTransDup=read.csv("./Data/ColonyTransitions/FULLDOMAIN_19.22.23_ColonyTransitions.csv")
+# dim(ColTransDup)
+# dim(distinct(ColTransDup))
+# ColTrans=distinct(ColTransDup)
+# write.csv(ColTrans,"./Data/ColonyTransitions/FULLDOMAIN_19.22.23_ColonyTransitions_NoDup.csv")
+
+ColTrans=read.csv("./Data/ColonyTransitions/FULLDOMAIN_19.22.23_ColonyTransitions_NoDup.csv")
 ColTrans$REGION[which(ColTrans$REGION=="PRIA")]="PRIAs"
 ColTrans$SEC_NAME[ColTrans$SEC_NAME%in%c("GUA_PITI_BOMB","GUA_TUMON_BAY")]="GUA_MP"
 #Reassign OAH_XX_022 to OAH_OCC_005
@@ -577,7 +583,7 @@ ColTrans=ColTrans %>% mutate(
 )
 
 #Output Data.Frames to continue
-save(list=c("Site2Sec_ONLY","ColTrans","RecSFMDataFrame","RecSFMSummary","Regional_SectorStockRec","Jsec_P_Asec","RecVal_Sec_Dists","Jsec_P_ALL"),
+save(list=c("Site2Sec","Site2Sec_ONLY","ColTrans","RecSFMDataFrame","RecSFMSummary","Regional_SectorStockRec","Jsec_P_Asec","RecVal_Sec_Dists","Jsec_P_ALL"),
      file = "./Data/ColonyTransitions/Script_Step3_DataPackage.rdata")
 
 
