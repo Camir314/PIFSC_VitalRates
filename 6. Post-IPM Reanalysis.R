@@ -31,7 +31,7 @@ MatrixVal$y = 0.5 * (MatrixVal$bin_size[1:MatrixVal$n]+MatrixVal$bin_size[2:(Mat
 MatrixVal$I = MatrixVal$y >= MatrixVal$rec.size
 MatrixVal$delta_size = MatrixVal$y[2] - MatrixVal$y[1] #width of cells (h)
 
-s2sc=Site2Sec %>% st_coordinates() %>% as.data.frame() %>% rename(Longitude=X,Latitue=Y) 
+s2sc=Site2Sec %>% st_coordinates() %>% as.data.frame() %>% rename(Longitude=X,Latitude=Y) 
 Site2SecLL=Site2Sec %>% st_drop_geometry() %>% cbind(s2sc)%>% select(!c(Date,SEC_NAME,Region)) %>% distinct()
 MODs=MODs %>% left_join(Site2SecLL,by=c("Site"))
 
@@ -325,7 +325,7 @@ for (i in 1:length(uSIG)){
     theme_bw()
   JoinP=ScurveP+GcurveP+RcurveP+
     plot_annotation(title=paste("SIG:",selSIG,"; L :",round(SIGr$Lambda,2),"; ",i,"of",length(uSIG),"; Ng:",SIGr$pg.N,"; Ns:",SIGr$s.N))
-  print(JoinP)
+ # print(JoinP)
  # readline(prompt="Press [enter] to continue")
 }
 
@@ -388,11 +388,33 @@ for (i in 1:length(uG)){
   JoinP=ScurveP+GcurveP+RcurveP+
     plot_layout(guides = "collect")+
     plot_annotation(title = paste0(selG," Vital Rates"))&theme(legend.position = "bottom")
-  print(JoinP)
+  #print(JoinP)
  # readline(prompt="Press [enter] to continue")
 }
 
-Elaslist
-Name
+
+Site_Level_Lam=MODs_pca %>%
+  group_by(Site,Longitude,Latitude) %>%
+  summarize(Lp_ALL=prod(Lambda),Nl_ALL=length(Lambda))
+Site_Level_Lam_POSP=MODs_pca %>% filter(GENUS_CODE=="POSP") %>% 
+  group_by(Site,Longitude,Latitude) %>%
+  summarize(Lp_POSP=prod(Lambda),Nl_POSP=length(Lambda))
+Site_Level_Lam_MOSP=MODs_pca %>% filter(GENUS_CODE=="MOSP") %>% 
+  group_by(Site,Longitude,Latitude) %>%
+  summarize(Lp_MOSP=prod(Lambda),Nl_MOSP=length(Lambda))
+Site_Level_Lam_ACSP=MODs_pca %>% filter(GENUS_CODE=="ACSP") %>% 
+  group_by(Site,Longitude,Latitude) %>%
+  summarize(Lp_ACSP=prod(Lambda),Nl_ACSP=length(Lambda))
+Site_Level_Lam_POCS=MODs_pca %>% filter(GENUS_CODE=="POCS") %>% 
+  group_by(Site,Longitude,Latitude) %>%
+  summarize(Lp_POCS=prod(Lambda),Nl_POCS=length(Lambda))
+Site_Level_Lam=Site_Level_Lam %>%
+  left_join(Site_Level_Lam_POSP,by=c("Site","Longitude","Latitude")) %>% 
+  left_join(Site_Level_Lam_MOSP,by=c("Site","Longitude","Latitude")) %>% 
+  left_join(Site_Level_Lam_POCS,by=c("Site","Longitude","Latitude")) %>% 
+  left_join(Site_Level_Lam_ACSP,by=c("Site","Longitude","Latitude")) %>% arrange(desc(Lp_ALL))
+write.csv(Site_Level_Lam,file=paste0("./Data/",Name,"SiteLevelLambdas.csv"))
 save(list=c("MODs_pca","CurveRef","CurvesDF"),file=paste0("./Data/ModelData/",Name,"Model_LL_SIGCurves.rdata"))
+
+
      
