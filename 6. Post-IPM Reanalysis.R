@@ -395,25 +395,29 @@ for (i in 1:length(uG)){
 
 Site_Level_Lam=MODs_pca %>%
   group_by(Site,Longitude,Latitude) %>%
-  summarize(Lp_ALL=prod(Lambda),Nl_ALL=length(Lambda))
+  summarize(Lp_ALL=prod(Lambda),Nl_ALL=length(Lambda),Lp_BIN_ALL=cut(Lp_ALL,breaks = c(0,.75,.9,1,5),labels = c("Very Low","Low","<10% Decline","Above Replacement")))
 Site_Level_Lam_POSP=MODs_pca %>% filter(GENUS_CODE=="POSP") %>% 
   group_by(Site,Longitude,Latitude) %>%
-  summarize(Lp_POSP=prod(Lambda),Nl_POSP=length(Lambda))
+  summarize(Lp_POSP=prod(Lambda),Nl_POSP=length(Lambda),Lp_BIN_POSP=cut(Lp_POSP,breaks = c(0,.75,.9,1,5),labels = c("Very Low","Low","<10% Decline","Above Replacement")))
 Site_Level_Lam_MOSP=MODs_pca %>% filter(GENUS_CODE=="MOSP") %>% 
   group_by(Site,Longitude,Latitude) %>%
-  summarize(Lp_MOSP=prod(Lambda),Nl_MOSP=length(Lambda))
+  summarize(Lp_MOSP=prod(Lambda),Nl_MOSP=length(Lambda),Lp_BIN_MOSP=cut(Lp_MOSP,breaks = c(0,.75,.9,1,5),labels = c("Very Low","Low","<10% Decline","Above Replacement")))
 Site_Level_Lam_ACSP=MODs_pca %>% filter(GENUS_CODE=="ACSP") %>% 
   group_by(Site,Longitude,Latitude) %>%
-  summarize(Lp_ACSP=prod(Lambda),Nl_ACSP=length(Lambda))
+  summarize(Lp_ACSP=prod(Lambda),Nl_ACSP=length(Lambda),Lp_BIN_ACSP=cut(Lp_ACSP,breaks = c(0,.75,.9,1,5),labels = c("Very Low","Low","<10% Decline","Above Replacement")))
 Site_Level_Lam_POCS=MODs_pca %>% filter(GENUS_CODE=="POCS") %>% 
   group_by(Site,Longitude,Latitude) %>%
-  summarize(Lp_POCS=prod(Lambda),Nl_POCS=length(Lambda))
+  summarize(Lp_POCS=prod(Lambda),Nl_POCS=length(Lambda),Lp_BIN_POCS=cut(Lp_POCS,breaks = c(0,.75,.9,1,5),labels = c("Very Low","Low","<10% Decline","Above Replacement")))
 Site_Level_Lam=Site_Level_Lam %>%
   left_join(Site_Level_Lam_POSP,by=c("Site","Longitude","Latitude")) %>% 
   left_join(Site_Level_Lam_MOSP,by=c("Site","Longitude","Latitude")) %>% 
   left_join(Site_Level_Lam_POCS,by=c("Site","Longitude","Latitude")) %>% 
   left_join(Site_Level_Lam_ACSP,by=c("Site","Longitude","Latitude")) %>% arrange(desc(Lp_ALL))
-write.csv(Site_Level_Lam,file=paste0("./Data/",Name,"SiteLevelLambdas.csv"))
+
+
+Site_LL_Lam=MODs_pca %>% select(Site,Longitude,Latitude,GENUS_CODE,Interval,StartingDate,EndingDate,Lambda) %>% arrange(Site,GENUS_CODE,Interval)
+write.csv(Site_Level_Lam,file=paste0("./Data/",Name,"_SiteLevel_ProdLambdas_ALL.csv"),row.names = F)
+write.csv(Site_LL_Lam,file=paste0("./Data/",Name,"_Site_Interval_Lambdas.csv"),row.names = F)
 save(list=c("MODs_pca","CurveRef","CurvesDF"),file=paste0("./Data/ModelData/",Name,"Model_LL_SIGCurves.rdata"))
 
 
