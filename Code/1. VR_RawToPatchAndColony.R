@@ -15,10 +15,10 @@ library(sp)
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
 
-raw <- read.csv("./CSV files/RawData/HARAMP24_VitalRates_12-02-2025.csv")
+raw <- read.csv("./Data/RawData/HARAMP24_VitalRates_12-02-2025.csv")
 # raw <- read.csv("./CSV files/RawData/MARAMP22_VitalRates_06-24-2024.csv")
-ll <- read.csv("./CSV files/MetaData/VitalRates_LatLong.csv")
-effort <- read.csv("./CSV files/MetaData/VitalRates_SurveyEffort.csv")
+ll <- read.csv("./Data/MetaData/VitalRates_LatLong.csv")
+effort <- read.csv("./Data/MetaData/VitalRates_SurveyEffort.csv")
 
 #### QC Data ####
 ## (OPTIONAL) Remove superfluous columns:
@@ -159,7 +159,8 @@ a <- vr %>% group_by(Site, Year,TL_Genet) %>% summarise(nPatches = n())
 vr_col <- left_join(vr_col, a)
 
 
-#### Format dataframe into archive csv file ####
+# Need to update/ consider minimum sizes....
+#### Format dataframe into archive csv file #### 
 # Add in Island_Code, DataorError, Error_Category
 archive <- vr_col
 
@@ -227,6 +228,6 @@ head(archive)
 #### Export Data ####
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
-write.csv(vr,"./CSV files/PatchLevel/HARAMP22_VitalRates_patchlevel_CLEAN.csv",row.names = F)
-write.csv(vr_col,"./CSV files/ColonyLevel/HARAMP22_VitalRates_colonylevel_CLEAN.csv",row.names = F)
-write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/ASRAMP/ASRAMP23_VitalRates_colonylevel_InportArchive.csv",row.names = F)
+write.csv(vr,"./Data/PatchLevel/HARAMP24_VitalRates_patchlevel_CLEAN.csv",row.names = F)
+write.csv(vr_col,"./Data/ColonyLevel/HARAMP24_VitalRates_colonylevel_CLEAN.csv",row.names = F)
+#write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/ASRAMP/ASRAMP23_VitalRates_colonylevel_InportArchive.csv",row.names = F)
