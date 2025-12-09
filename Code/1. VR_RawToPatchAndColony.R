@@ -15,7 +15,7 @@ library(sp)
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
 
-raw <- read.csv("./CSV files/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
+raw <- read.csv("./CSV files/RawData/HARAMP24_VitalRates_12-02-2025.csv")
 # raw <- read.csv("./CSV files/RawData/MARAMP22_VitalRates_06-24-2024.csv")
 ll <- read.csv("./CSV files/MetaData/VitalRates_LatLong.csv")
 effort <- read.csv("./CSV files/MetaData/VitalRates_SurveyEffort.csv")
@@ -23,12 +23,12 @@ effort <- read.csv("./CSV files/MetaData/VitalRates_SurveyEffort.csv")
 #### QC Data ####
 ## (OPTIONAL) Remove superfluous columns:
 colnames(raw)
-raw <- raw %>% select(-c(OID_, TL_SurfA))
-
+#raw <- raw %>% select(-c(OID_, TL_SurfA))
+raw <- raw %>% select(-TL_SurfA)
 
 # Change some column names
 raw <- raw %>% rename("Surface_Area" = "SArea")
-                      
+                   
 
 ## Look for potential issues in the data:
 lapply(raw, unique)
@@ -48,6 +48,12 @@ raw <- raw %>% mutate(Morph_Code = case_when(Morph_Code == "RM" ~ "EM",
                                              Morph_Code == "KN" ~ "KN",
                                              Morph_Code == "PL" ~ "PL",
                                              Morph_Code == "MD" ~ "MD"))
+raw <- raw %>% mutate(Annotator = case_when (Annotator == "SJD" ~ "SD",
+                                             Annotator == "SD" ~ "SD",
+                                             Annotator == "CA" ~ "CA",
+                                             Annotator == "ES" ~ "ES",
+                                             Annotator == "KT" ~ "KT",
+                                             Annotator == "MSL" ~ "ML"))
 
 
 ## Check if TimePt is labelled correctly:
@@ -92,13 +98,19 @@ vr <- vr %>% mutate(Genus = case_when(TL_Class == "PMEA" ~ "POCS",
                                           TL_Class == "AGLO" ~ "ACSP",
                                           TL_Class == "PGRA" ~ "POCS",
                                           TL_Class == "PLOB" ~ "POSP",
+                                          TL_Class == "PLIC" ~ "POSP",    
                                           TL_Class == "PLUT" ~ "POSP",
                                           TL_Class == "POCS" ~ "POCS",
                                           TL_Class == "MOSP" ~ "MOSP",
+                                          TL_Class == "MPAT" ~ "MOSP",
+                                          TL_Class == "MCAP" ~ "MOSP",
                                           TL_Class == "ACSP" ~ "ACSP",
                                           TL_Class == "POSP" ~ "POSP"))
 lapply(vr, unique) # double check
 
+
+## Add island code
+vr$Island <- str_sub(vr$Site,5,7)
 
 ## Add Lat and Long
 ll <- ll %>% filter(Region != "vr") %>% rename(Site = ESD.Site.Name) %>% select(-Year)
@@ -107,8 +119,8 @@ vr <- left_join(vr, ll)
 
 
 ## Add m2 surveyed (collected from tracking spreadsheet)
-
-vr <- left_join(vr, effort)
+vr$Year <- as.integer(vr$Year)
+a <- left_join(vr, effort, by = c("Site", "Year","Genus"))
 
 
 ## Add area:perimeter ratio
@@ -129,8 +141,8 @@ head(vr)
 
 # Create colony dataframe:
 vr_col <- vr %>% dplyr::select(Genet_full, TL_Area, TL_Perim, Shape_Leng, Shape_Area, Surface_Area, area_perim) 
-vr_meta <- vr %>% dplyr::select(Genet_full, Island, Region, Site, TimePt, Year, TL_Date, Latitude,Longitude,
-                                Genus, TL_Class, TL_Genet, Quadrat, Effort) %>%
+vr_meta <- vr %>% dplyr::select(Genet_full, Island, Site, TimePt, Year, TL_Date, Latitude,Longitude, #Region, Effort
+                                Genus, TL_Class, TL_Genet, Quadrat) %>%
   distinct()
 vr_col <- aggregate(.~Genet_full, data = vr_col, sum)
 vr_col <- left_join(vr_meta,vr_col)
@@ -215,6 +227,6 @@ head(archive)
 #### Export Data ####
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
-write.csv(vr,"./CSV files/PatchLevel/MARAMP22_VitalRates_patchlevel_CLEAN.csv",row.names = F)
-write.csv(vr_col,"./CSV files/ColonyLevel/MARAMP22_VitalRates_colonylevel_CLEAN.csv",row.names = F)
-write.csv(archive,"./CSV files/ColonyLevel/ASRAMP23_VitalRates_colonylevel_InportArchive.csv",row.names = F)
+write.csv(vr,"./CSV files/PatchLevel/HARAMP22_VitalRates_patchlevel_CLEAN.csv",row.names = F)
+write.csv(vr_col,"./CSV files/ColonyLevel/HARAMP22_VitalRates_colonylevel_CLEAN.csv",row.names = F)
+write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/ASRAMP/ASRAMP23_VitalRates_colonylevel_InportArchive.csv",row.names = F)
