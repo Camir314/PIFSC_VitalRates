@@ -18,18 +18,22 @@ D2A=function(D){return((D/2)^2*pi)}
 source("R/gcdist.R") # No such file or directory
 
 # Loading / Managing DataFrames: ColTrans, surv_dat  ----------------------------------------------  ---------
-ColTrans=read.csv("./CSV files/ColonyTransitions/ASRAMP23_ColonyTransitions.csv")
-
+ColTrans=read.csv("./Data/ColonyTransitions/MAASHA_22-24_ColonyTransitions.csv")
+ColTrans=ColTrans %>% 
+  rename(StartingDate=TL_Date_STA,EndingDate=TL_Date_END) %>% 
+  mutate(SiteInterval=paste0(Site,"_",Interval))
 #Prepping surv_dat output
-surv_dat=ColTrans[,c("Site_Genet","l10_Area_STA","Survival","Genus","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years","StartingDate","EndingDate")] 
+surv_dat=ColTrans[,c("Site","Site_Genet","Genus","Interval","SiteInterval","l10_Area_STA","nPatches_STA","Survival","TransitionTypeSimple","Interval_Years","StartingDate","EndingDate")] 
 # ^ missing SiteInterval, N_t0, TransitionType, StartingDate","EndingDate. Needs to b3 added in code #2
 # Is this located in the packages code?
-surv_dat=subset(surv_dat,TransitionType!="RECR")
-names(surv_dat)=c("ColonyID","size","survival","Genus_Code","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years")
+surv_dat=subset(surv_dat,TransitionTypeSimple!="RECR")
+surv_dat=surv_dat %>% rename(ColonyID=Site_Genet,size=l10_Area_STA,survival=Survival,Genus_code=Genus,
+                             N_t0=nPatches_STA,TransitionType=TransitionTypeSimple)
+#names(surv_dat)=c("ColonyID","size","survival","Genus_Code","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years")
 
 # Change these file names when saving data to refect the new changes
-# save(ColTrans, file="data/Colony_Data_20210917_edited.rdata")
-# save(surv_dat, file="data/Colony_Data_202100917_edited_survival.rdata")
+save(ColTrans, file="data/Colony_Data_20251211_edited.rdata")
+save(surv_dat, file="data/Colony_Data_20251211_edited_survival.rdata")
 
 
 # Where we run the models -------------------------------------------------
