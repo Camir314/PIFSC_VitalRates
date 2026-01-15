@@ -15,7 +15,7 @@ library(sp)
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
 
-raw <- read.csv("./Data/RawData/HARAMP24_VitalRates_12-02-2025.csv")
+raw <- read.csv("./Data/RawData/HARAMP24_VitalRates_12-21-2025.csv")
 # raw <- read.csv("./CSV files/RawData/MARAMP22_VitalRates_06-24-2024.csv")
 ll <- read.csv("./Data/MetaData/VitalRates_LatLong.csv")
 effort <- read.csv("./Data/MetaData/VitalRates_SurveyEffort.csv")
@@ -23,7 +23,7 @@ effort <- read.csv("./Data/MetaData/VitalRates_SurveyEffort.csv")
 #### QC Data ####
 ## (OPTIONAL) Remove superfluous columns:
 colnames(raw)
-#raw <- raw %>% select(-c(OID_, TL_SurfA))
+# raw <- raw %>% select(-c(OID_, TL_SurfA))
 raw <- raw %>% select(-TL_SurfA)
 
 # Change some column names
@@ -32,6 +32,11 @@ raw <- raw %>% rename("Surface_Area" = "SArea")
 
 ## Look for potential issues in the data:
 lapply(raw, unique)
+
+## Look for rows with NA values
+rows_with_na <- raw %>%
+  filter(if_any(everything(), is.na))
+print(rows_with_na)
 
 # ## Remove or alter rows based on TL_Note:
 # raw <- raw %>% filter(TL_Note != "Out of bounds in 2022") # remove colonies that could not be tracked into 2022
@@ -57,7 +62,7 @@ raw <- raw %>% mutate(Annotator = case_when (Annotator == "SJD" ~ "SD",
 
 
 ## Check if TimePt is labelled correctly:
-a <- raw %>% group_by(Site, TL_Date, TimePt) %>% summarise(sum(TimePt)) ; View(a)
+TP_true <- raw %>% group_by(Site, TL_Date, TimePt) %>% summarise(sum(TimePt)) # ; View(a)
   # HOW-005-2017/2018 = Jan 1
   # TUT-019-2018 = Jan 1
 # raw$TL_Date <- as.factor(raw$TL_Date)
@@ -73,23 +78,44 @@ raw$TL_Date <- anydate(raw$TL_Date) # Change date format
 raw$TL_id <- str_pad(raw$TL_id, 3, pad = "0")
 raw$TL_Genet <- str_pad(raw$TL_Genet, 3, pad = "0")
 
-#### Create additional columns #####
-
-vr <- raw
 
 # Turn TimePt into Year
-vr$Year <- str_sub(vr$TL_Date,1,4)
-vr %>% group_by(Site, TL_Date, Year) %>% summarise() # QC check
-
+raw$Year <- str_sub(raw$TL_Date,1,4)
+raw %>% group_by(Site, TL_Date, Year) %>% summarise() # QC check
 
 
 ## Create unique name for all genets: 
-vr$Genet_full <- paste(vr$Site,  vr$TL_Genet, vr$Year, sep = "_")
-vr[11,] # double check
+raw$Genet_full <- paste(raw$Site,  raw$TL_Genet, raw$Year, sep = "_")
+raw[11,] # double check
 
 ## Create unique name for all patches: 
-vr$Patch_full <- paste(vr$Site, vr$TL_id, vr$Year,  sep = "_")
-vr[11,] # double check
+raw$Patch_full <- paste(raw$Site, raw$TL_id, raw$Year,  sep = "_")
+raw[11,] # double check
+
+
+## Make sure TL_code matches for all patches with the same TL_genet
+diff_species <- raw %>% group_by(Genet_full, TL_Class) %>% 
+  summarise() %>% 
+  filter(n() >1) %>% 
+  ungroup()
+print(diff_species)
+
+
+raw$Genet_noyear <- paste(raw$Site,  raw$TL_Genet, sep = "_") # Check between time points
+raw$Patch_noyear <- paste(raw$Site,  raw$TL_id, sep = "_")
+
+diff_species_diffyear <- raw %>% group_by(Genet_noyear, TL_Class) %>% 
+  summarise() %>% 
+  filter(n() >1) %>% 
+  ungroup()
+print(diff_species_diffyear) # for now, only going to edit where genus isn't equal
+
+
+
+
+#### Create additional columns #####
+
+vr <- raw
 
 
 ## Roll TL_Class up to genus (consider separating PGRA)
@@ -118,7 +144,7 @@ ll <- ll %>% filter(Region != "vr") %>% rename(Site = ESD.Site.Name) %>% select(
 vr <- left_join(vr, ll)
 
 
-## Add m2 surveyed (collected from tracking spreadsheet)
+## Add m2 surveyed
 vr$Year <- as.integer(vr$Year)
 a <- left_join(vr, effort, by = c("Site", "Year","Genus"))
 
@@ -159,8 +185,16 @@ a <- vr %>% group_by(Site, Year,TL_Genet) %>% summarise(nPatches = n())
 vr_col <- left_join(vr_col, a)
 
 
-# Need to update/ consider minimum sizes....
+## Look for duplicate rows
+duplicated_rows <- vr %>%
+  group_by_all() %>%
+  filter(n() > 1) %>%
+  ungroup()
+print(duplicated_rows)
+
+
 #### Format dataframe into archive csv file #### 
+# Need to update/ consider minimum sizes....
 # Add in Island_Code, DataorError, Error_Category
 archive <- vr_col
 
@@ -230,4 +264,6 @@ head(archive)
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
 write.csv(vr,"./Data/PatchLevel/HARAMP24_VitalRates_patchlevel_CLEAN.csv",row.names = F)
 write.csv(vr_col,"./Data/ColonyLevel/HARAMP24_VitalRates_colonylevel_CLEAN.csv",row.names = F)
+write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/HARAMP/HARAMP24_VitalRates_colonylevel_InportArchive.csv",row.names = F)
+
 #write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/ASRAMP/ASRAMP23_VitalRates_colonylevel_InportArchive.csv",row.names = F)
