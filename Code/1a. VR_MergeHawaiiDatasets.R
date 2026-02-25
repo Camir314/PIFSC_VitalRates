@@ -112,3 +112,8 @@ diff_species_diffyear <- ColonyLevel2 %>% group_by(Site_Genet, Genus) %>%
   ungroup()
 print(diff_species_diffyear) # for now, only going to edit where genus isn't equal
 
+
+# Export data 
+write.csv(ColonyLevel2,"./Data/ColonyLevel/HARAMP19_VitalRates_colonylevel_CLEAN.csv",row.names = F)
+
+
