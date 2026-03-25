@@ -4,13 +4,19 @@ library(lubridate)
 library(factoextra)
 library(NbClust)
 
+<<<<<<< HEAD
 REGIONYR=c("HARAMP19","MARAMP22","ASRAMP23","HARAMP24")# ##
+=======
+Col=read.csv("./Data/ColonyTransitions/HARAMP19_VitalRates_ColonyTransitions_NotUpdated.csv") # For HARAMP19
+
+REGIONYR=c("MARAMP22","ASRAMP23","HARAMP24","HARAMP19")###
+>>>>>>> 81e5d56a64501cc8ca04852ce693008c60b633f8
 for (iRY in REGIONYR){
   # Data Load ---------------------------------------------------------------
   Col=read.csv(paste0("./Data/ColonyLevel/",iRY,"_VitalRates_colonylevel_CLEAN.csv"))
-  Col$TL_Date=ymd(Col$TL_Date)
-  Col=Col %>% arrange(Site_Genet,TimePt) %>% filter(TL_Class != "Dummy")
-  if (iRY%in%c("MARAMP22","ASRAMP23")){Col=Col %>% rename(Surface_Area=SArea)}
+  Col$Date=ymd(Col$Date)
+  Col=Col %>% arrange(Site_Genet,TimePt) %>% filter(Genus_Code != "Dummy")
+  # if (iRY%in%c("MARAMP22","ASRAMP23")){Col=Col %>% rename(Surface_Area=SArea)}
     
   # Determine Unique Time Points ---------------------------
   #Use YEAR OR DATE_CLUSTER
@@ -25,7 +31,7 @@ for (iRY in REGIONYR){
     
   }else if(TP_METHOD=="DATE_CLUSTER"){
     # but worth checking clustering at Date Level
-    uD=sort(unique(Col$TL_Date))
+    uD=sort(unique(Col$Date))
     uDD=dist(uD)
     #Determine best number of TimePoints by clustering
     # K=NbClust(data = uD,diss = uDD,distance = NULL,
@@ -55,7 +61,7 @@ for (iRY in REGIONYR){
     Date_TP_LU=Date_TP_df$IDc;names(Date_TP_LU)=Date_TP_df$Date
     
     #Assign TimePoint IDs
-    Col$TP_ID=Date_TP_LU[as.character((Col$TL_Date))]
+    Col$TP_ID=Date_TP_LU[as.character((Col$Date))]
   }else{
     stop("No valid Time Point selection method.")
   }
@@ -66,11 +72,11 @@ for (iRY in REGIONYR){
   uTP=sort(unique(Col$TimePt))
   #Loop through one less than the total number of TPs
   #site data
-  SiteData=unique(Col[,c("Island","Site","TimePt","TP_ID","Year","TL_Date")]) %>% arrange(Site,TP_ID)
+  SiteData=unique(Col[,c("Island","Site","TimePt","TP_ID","Year","Date")]) %>% arrange(Site,TP_ID)
   
   #joincols
-  alljoincols=c("Island","Site","Genus","Site_Genet","TimePt","TP_ID","Year","TL_Date","Surface_Area","Shape_Area","Shape_Leng","nPatches") #switch to shape_area and shape_perim 
-  byjoincols=c("Island","Site","Genus","Site_Genet")
+  alljoincols=c("Island","Site","Genus_Code","Site_Genet","TimePt","TP_ID","Year","Date","Surface_Area","Shape_Area","Shape_Leng","nPatches") #switch to shape_area and shape_perim 
+  byjoincols=c("Island","Site","Genus_Code","Site_Genet")
   
   #Search for raw dups and drop (should be none)
   Dup0_i=Col %>% duplicated(nmax=nrow(Col)) %>% which()
@@ -83,24 +89,24 @@ for (iRY in REGIONYR){
   Col=Col %>% filter(!(Genet_full %in% Col$Genet_full[DupQ_i]&Quadrat==-99))
   
   #Search duplicates that differ only by Species, if genus is same, keep one, if genus different (2) drop em both
-  DupS_i=Col %>% select(-TL_Class) %>% duplicated(nmax=nrow(Col)) %>% which()
+  DupS_i=Col %>% select(-Genus_Code) %>% duplicated(nmax=nrow(Col)) %>% which()
   #Dup_i=Col %>% select(Shape_Leng,Shape_Area,Surface_Area) %>% duplicated(nmax=nrow(Col)) %>% which()
   Col %>% filter(Genet_full%in% Col$Genet_full[DupS_i])
   
-  #First change TL_Class to Genus
-  Col=Col %>% mutate(TL_Class=ifelse((Genet_full %in% Col$Genet_full[DupS_i]),
-                                     Genus,TL_Class))
-  #Now that TL_Class is same as Genus for duplicated rows, drop any overall dups
+  #First change Species_Code to Genus
+  Col=Col %>% mutate(Species_Code=ifelse((Genet_full %in% Col$Genet_full[DupS_i]),
+                                     Genus,Species_Code))
+  #Now that Species_Code is same as Genus for duplicated rows, drop any overall dups
   Dup02_i=Col %>% duplicated(nmax=nrow(Col)) %>% which()
   if(length(Dup02_i)>0){Col=Col[-Dup02_i,]}
   
   #Now Get genus Dups, drop both entries
-  DupG_i=Col %>% select(-Genus,-TL_Class) %>% duplicated(nmax=nrow(Col)) %>% which()
+  DupG_i=Col %>% select(-Genus_Code,-Species_Code) %>% duplicated(nmax=nrow(Col)) %>% which()
   Col %>% filter(Genet_full%in% Col$Genet_full[DupG_i])
   Col=Col %>% filter(!(Genet_full%in% Col$Genet_full[DupG_i]))
   
   #Check Taxon ID for changes
-  SplitTax_sg=Col %>% group_by(Site_Genet) %>% summarize(Ntax=length(unique(Genus))) %>% filter(Ntax>1) %>% pull(Site_Genet)
+  SplitTax_sg=Col %>% group_by(Site_Genet) %>% summarize(Ntax=length(unique(Genus_Code))) %>% filter(Ntax>1) %>% pull(Site_Genet)
   Col=Col %>% filter(!Site_Genet%in%SplitTax_sg)
   
   #This code is structured to loop timepoints and quickly include all single-timestep
@@ -205,7 +211,7 @@ for (iRY in REGIONYR){
   dim(ColonyTransitions);dim(BrokenTrans);dim(CTminus);
   
   #Fix em
-  IDcol=c("Island", "Site"  ,   "Genus", "Site_Genet")
+  IDcol=c("Island", "Site"  ,   "Genus_Code", "Site_Genet")
   STACol=grep(pattern = "_STA",names(ColonyTransitions),value = TRUE)
   ENDCol=grep(pattern = "_END",names(ColonyTransitions),value = TRUE)
   BT_mort=BrokenTrans %>% filter(TransitionTypeSimple=="MORT")
@@ -233,7 +239,7 @@ for (iRY in REGIONYR){
       l10_Surface_Area_STA=log10(Surface_Area_STA),
       l10_Surface_Area_END=log10(Surface_Area_END),
       l10STransitionMagnitude=l10_Surface_Area_END-l10_Surface_Area_STA,
-      Interval_Years=as.numeric(difftime(TL_Date_END,TL_Date_STA,units = "days"))/365.25,
+      Interval_Years=as.numeric(difftime(Date_END,Date_STA,units = "days"))/365.25,
       l10_Area_ENDann=l10_Area_STA+(l10TransitionMagnitude/Interval_Years),
       l10_Surface_Area_ENDann=l10_Surface_Area_STA+(l10STransitionMagnitude/Interval_Years),
       #Mortality and Survival
