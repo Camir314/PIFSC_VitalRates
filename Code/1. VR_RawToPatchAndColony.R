@@ -15,8 +15,14 @@ library(sp)
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files') # Github repo
 
-raw <- read.csv("./Data/RawData/HARAMP24_VitalRates_12-21-2025.csv")
-# raw <- read.csv("./CSV files/RawData/MARAMP22_VitalRates_06-24-2024.csv")
+#Rbind all raw MAASHA data
+rawHA <- read.csv("./Data/RawData/HARAMP24_VitalRates_12-21-2025.csv")
+rawMA <- read.csv("./Data/RawData/MARAMP22_VitalRates_06-24-2024.csv")
+rawAS <- read.csv("./Data/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
+keepcols=names(rawHA)
+keepcols=keepcols[-c(which(keepcols=="TL_Note"),which(keepcols=="QC_Check"))]  
+raw=rbind(rawMA[,keepcols],rawAS[,keepcols],rawHA[,keepcols])
+
 ll <- read.csv("./Data/MetaData/VitalRates_LatLong.csv")
 effort <- read.csv("./Data/MetaData/VitalRates_SurveyEffort.csv")
 
@@ -86,11 +92,11 @@ raw %>% group_by(Site, TL_Date, Year) %>% summarise() # QC check
 
 ## Create unique name for all genets: 
 raw$Genet_full <- paste(raw$Site,  raw$TL_Genet, raw$Year, sep = "_")
-raw[11,] # double check
+raw[1111,] # double check
 
 ## Create unique name for all patches: 
 raw$Patch_full <- paste(raw$Site, raw$TL_id, raw$Year,  sep = "_")
-raw[11,] # double check
+raw[1111,] # double check
 
 
 ## Make sure TL_code matches for all patches with the same TL_genet
@@ -139,19 +145,20 @@ lapply(vr, unique) # double check
 vr$Island <- str_sub(vr$Site,5,7)
 
 ## Add Lat and Long
-ll <- ll %>% filter(Region != "vr") %>% rename(Site = ESD.Site.Name) %>% select(-Year)
+ll <- ll %>% filter(Region != "vr") %>% select(-Year.Collected)
 
 vr <- left_join(vr, ll)
 
 
 ## Add m2 surveyed
 vr$Year <- as.integer(vr$Year)
-a <- left_join(vr, effort, by = c("Site", "Year","Genus"))
-
+a <- left_join(vr, effort, by = c("Island","Site", "Year","Genus"))
 
 ## Add area:perimeter ratio
 
 vr$area_perim <- vr$Shape_Area/vr$Shape_Leng
+
+vr<-a
 
 head(vr)
 
@@ -165,13 +172,21 @@ head(vr)
 
 #### Consolidate into colony dataframe ####
 
+#PHR 016 TL_perim is double what it should be. Dividing TL_Perim in half for that site only.
+#vr %>% filter(Site=="OCC-PHR-016") %>% ggplot(aes(x=100*Shape_Leng,y=TL_Perim))+geom_point()+geom_abline(slope = 2)
+vr$TL_Perim[which(vr$Site=="OCC-PHR-016")]=vr$TL_Perim[which(vr$Site=="OCC-PHR-016")]/2
+
 # Create colony dataframe:
 vr_col <- vr %>% dplyr::select(Genet_full, TL_Area, TL_Perim, Shape_Leng, Shape_Area, Surface_Area, area_perim) 
-vr_meta <- vr %>% dplyr::select(Genet_full, Island, Site, TimePt, Year, TL_Date, Latitude,Longitude, #Region, Effort
-                                Genus, TL_Class, TL_Genet, Quadrat) %>%
+vr_meta <- vr %>% dplyr::select(Genet_full, Region, Island, Site, TimePt, Year, TL_Date, Latitude,Longitude,
+                                Genus, TL_Class,Effort,Quadrat, TL_Genet) %>%
   distinct()
 vr_col <- aggregate(.~Genet_full, data = vr_col, sum)
 vr_col <- left_join(vr_meta,vr_col)
+
+
+# library(ggrepel)
+# ggplot(vr_col,aes(x=100*Shape_Leng,y=TL_Perim,label=Genet_full))+geom_point()+geom_text_repel()
 
 #group_by(Genet_full) %>% summarise(nrow(patches)) # Add in patch count 
 
@@ -262,8 +277,8 @@ head(archive)
 #### Export Data ####
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
-write.csv(vr,"./Data/PatchLevel/HARAMP24_VitalRates_patchlevel_CLEAN.csv",row.names = F)
-write.csv(vr_col,"./Data/ColonyLevel/HARAMP24_VitalRates_colonylevel_CLEAN.csv",row.names = F)
+write.csv(vr,"./Data/PatchLevel/MAASHA22-24_VitalRates_patchlevel_CLEAN.csv",row.names = F)
+write.csv(vr_col,"./Data/ColonyLevel/MAASHA22-24_VitalRates_colonylevel_CLEAN.csv",row.names = F)
 write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/HARAMP/HARAMP24_VitalRates_colonylevel_InportArchive.csv",row.names = F)
 
 #write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/ASRAMP/ASRAMP23_VitalRates_colonylevel_InportArchive.csv",row.names = F)
