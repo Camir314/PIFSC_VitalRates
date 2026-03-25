@@ -31,7 +31,7 @@ NuCol=length(uCol);NuCol
 issueDF=NULL
 Nissue=0
 for( ci in 1:NuCol){
-#  ci=760
+  #  ci=760
   thiscol=ColonyLevel %>% filter(ColonyID==uCol[ci])
   if(nrow(thiscol)==1){next()}else{
     #test for SS diff
@@ -75,7 +75,7 @@ dup_col <- ColonyLevel %>% group_by(Site_Genet) %>% # QC check
   filter(n() > 1) %>%
   ungroup()
 head(dup_col) 
-  
+
 # duplicate_counts <- ColonyLevel  %>%
 #   group_by_all() %>%
 #   summarise(count = n()) %>%
@@ -114,26 +114,51 @@ head(dup_col)
 
 #First pull other MASHA data for structure comparison
 MAASHA=read.csv("./Data/ColonyTransitions/MAASHA22-24_ColonyTransitions.csv")
+MAASHA=MAASHA %>% select(-X)
 names(MAASHA)
 names(ColonyLevel)
 cols_in=intersect(names(MAASHA),names(ColonyLevel));cols_in
 cols_out=setdiff(names(MAASHA),names(ColonyLevel));cols_out
 
-mean(ColonyLevel$StartingSize)
-mean(MAASHA$Shape_Area_STA)
-# Add NA columns with the correct name
-ColonyLevel_RBIND=ColonyLevel
-ColonyLevel_RBIND=ColonyLevel_RBIND %>% rename(Shape_Area_STA=StartingSize,
-  
-)
-for( coi in 1:length(cols_out)){
-  eval(parse(text=paste0("ColonyLevel_RBIND$",cols_out[coi],"=NA")))
-}
-#select a version of ColonyLevel in correct order
-ColonyLevel_RBIND=ColonyLevel_RBIND %>% select(all_of(names(MAASHA)))
+#TP look up (domain level - by year for now)
+tcol=c("TP_ID_STA","Year_STA","TP_ID_END","Year_END")
+s=MAASHA[,c("TP_ID_STA","Year_STA")] %>% rename(TP=TP_ID_STA,Year=Year_STA)
+e=MAASHA[,c("TP_ID_END","Year_END")] %>% rename(TP=TP_ID_END,Year=Year_END)
+TPlu=rbind(s,e) %>% distinct() %>% arrange(TP)
 
-head(ColonyLevel_RBIND)
-head(MASHA)
+#TimePt look up (site level)
+TimePt=ColonyLevel %>% select(Site,StartingDate,EndingDate) %>% distinct() %>% 
+  pivot_longer(cols=c("StartingDate","EndingDate"),names_to = "se",values_to = "Date")%>%
+  select(-se) %>% distinct() %>% arrange(Site,Date) %>% group_by(Site) %>% mutate(TimePt=0:(n()-1))
+TimePt %>% print(n=100)
+
+#Revamp ColonyLevel
+cm2_m2=0.0001
+ColonyLevel_RBIND=ColonyLevel
+ColonyLevel_RBIND=ColonyLevel_RBIND %>% rename(Date_STA=StartingDate,Date_END=EndingDate,
+                                               Shape_Area_STA=StartingSize,Shape_Leng_STA=StartingPerim,nPatches_STA=N_t0,
+                                               Shape_Area_END=EndingSize,Shape_Leng_END=EndingPerim,nPatches_END=N_t1) %>% 
+  mutate(Shape_Area_STA=Shape_Area_STA*cm2_m2,Shape_Area_END=Shape_Area_END*cm2_m2,
+         Shape_Leng_STA=Shape_Leng_STA/100,Shape_Leng_END=Shape_Leng_END/100,
+         Year_STA=year(Date_STA),Year_END=year(Date_END),Surface_Area_STA=NA,Surface_Area_END=NA,
+         l10_Area_STA=log10(Shape_Area_STA),l10_Area_END=log10(Shape_Area_END),
+         l10TransitionMagnitude=l10_Area_END-l10_Area_STA,l10_Surface_Area_STA=NA,l10_Surface_Area_END=NA,l10STransitionMagnitude=NA,
+         l10_Area_ENDann=l10_Area_STA+l10TransitionMagnitude/Interval_Years,l10_Surface_Area_ENDann=NA) %>% 
+  left_join(TimePt,by=c("Site","Date_STA"="Date")) %>% rename(TimePt_STA=TimePt) %>% 
+  left_join(TimePt,by=c("Site","Date_END"="Date")) %>% rename(TimePt_END=TimePt) %>% 
+  left_join(TPlu,by=c("Year_STA"="Year")) %>% rename(TP_ID_STA=TP) %>% 
+  left_join(TPlu,by=c("Year_END"="Year")) %>% rename(TP_ID_END=TP) %>% 
+  select(names(MAASHA))
+
+MAASHA$METHOD="NEW_TAGLAB_SA"
+ColonyLevel_RBIND$METHOD="OLD_JUSTARC_NOSA"
+MAASHA=rbind(MAASHA,ColonyLevel_RBIND)
+
+# Export data
+write.csv(MAASHA,"./Data/ColonyTransitions/MAASHA19-24_ColonyTransitions.csv")
+
+
+
 # 
 # 
 # test=rbind(MASHA,ColonyLevel_RBIND)
