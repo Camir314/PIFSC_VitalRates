@@ -5,6 +5,8 @@ library(lubridate)
 library(factoextra)
 library(NbClust)
 
+Col=read.csv("./Data/ColonyTransitions/HARAMP19_VitalRates_ColonyTransitions_NotUpdated.csv") # For HARAMP19
+
 REGIONYR=c("MARAMP22","ASRAMP23","HARAMP24","HARAMP19")###
 for (iRY in REGIONYR){
   # Data Load ---------------------------------------------------------------
@@ -70,8 +72,8 @@ for (iRY in REGIONYR){
   SiteData=unique(Col[,c("Island","Site","TimePt","TP_ID","Year","Date")]) %>% arrange(Site,TP_ID)
   
   #joincols
-  alljoincols=c("Island","Site","Genus","Site_Genet","TimePt","TP_ID","Year","Date","Surface_Area","Shape_Area","Shape_Leng","nPatches") #switch to shape_area and shape_perim 
-  byjoincols=c("Island","Site","Genus","Site_Genet")
+  alljoincols=c("Island","Site","Genus_Code","Site_Genet","TimePt","TP_ID","Year","Date","Surface_Area","Shape_Area","Shape_Leng","nPatches") #switch to shape_area and shape_perim 
+  byjoincols=c("Island","Site","Genus_Code","Site_Genet")
   
   #Search for raw dups and drop (should be none)
   Dup0_i=Col %>% duplicated(nmax=nrow(Col)) %>% which()
@@ -96,12 +98,12 @@ for (iRY in REGIONYR){
   if(length(Dup02_i)>0){Col=Col[-Dup02_i,]}
   
   #Now Get genus Dups, drop both entries
-  DupG_i=Col %>% select(-Genus,-TL_Class) %>% duplicated(nmax=nrow(Col)) %>% which()
+  DupG_i=Col %>% select(-Genus_Code,-Species_Code) %>% duplicated(nmax=nrow(Col)) %>% which()
   Col %>% filter(Genet_full%in% Col$Genet_full[DupG_i])
   Col=Col %>% filter(!(Genet_full%in% Col$Genet_full[DupG_i]))
   
   #Check Taxon ID for changes
-  SplitTax_sg=Col %>% group_by(Site_Genet) %>% summarize(Ntax=length(unique(Genus))) %>% filter(Ntax>1) %>% pull(Site_Genet)
+  SplitTax_sg=Col %>% group_by(Site_Genet) %>% summarize(Ntax=length(unique(Genus_Code))) %>% filter(Ntax>1) %>% pull(Site_Genet)
   Col=Col %>% filter(!Site_Genet%in%SplitTax_sg)
   
   #This code is structured to loop timepoints and quickly include all single-timestep
@@ -206,7 +208,7 @@ for (iRY in REGIONYR){
   dim(ColonyTransitions);dim(BrokenTrans);dim(CTminus);
   
   #Fix em
-  IDcol=c("Island", "Site"  ,   "Genus", "Site_Genet")
+  IDcol=c("Island", "Site"  ,   "Genus_Code", "Site_Genet")
   STACol=grep(pattern = "_STA",names(ColonyTransitions),value = TRUE)
   ENDCol=grep(pattern = "_END",names(ColonyTransitions),value = TRUE)
   BT_mort=BrokenTrans %>% filter(TransitionTypeSimple=="MORT")
