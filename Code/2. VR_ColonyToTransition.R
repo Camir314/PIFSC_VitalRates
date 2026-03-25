@@ -1,11 +1,10 @@
-
 # Library Calls -----------------------------------------------------------
 library(tidyverse)
 library(lubridate)
 library(factoextra)
 library(NbClust)
 
-REGIONYR=c("MARAMP22","ASRAMP23","HARAMP24")# ##
+REGIONYR=c("HARAMP19","MARAMP22","ASRAMP23","HARAMP24")# ##
 for (iRY in REGIONYR){
   # Data Load ---------------------------------------------------------------
   Col=read.csv(paste0("./Data/ColonyLevel/",iRY,"_VitalRates_colonylevel_CLEAN.csv"))
@@ -255,31 +254,48 @@ for (iRY in REGIONYR){
 # Compile Transition Data Out -----------------------------------------------------
 ColTransPath="./Data/ColonyTransitions/"
 RegionalFiles=sort(list.files(path = ColTransPath,pattern = "_ColonyTransitions.csv"))
-MA=read.csv(paste0(ColTransPath,RegionalFiles[3]))
+MA=read.csv(paste0(ColTransPath,RegionalFiles[4]))
 AS=read.csv(paste0(ColTransPath,RegionalFiles[1]))
-HA=read.csv(paste0(ColTransPath,RegionalFiles[2]))
+HA24=read.csv(paste0(ColTransPath,RegionalFiles[2]))
+HA19=read.csv(paste0(ColTransPath,RegionalFiles[3]))
+
 MA=MA %>% select(-X,-TimePt_STA,-TimePt_END)  
 AS=AS %>% select(-X,-TimePt_STA,-TimePt_END) 
-HA=HA %>% select(-X,-TP_ID_STA,-TP_ID_END) %>%
+HA19=HA19 %>% select(-X,-TP_ID_STA,-TP_ID_END) %>%
+  rename(TP_ID_STA=TimePt_STA,TP_ID_END=TimePt_END)
+HA24=HA24 %>% select(-X,-TP_ID_STA,-TP_ID_END) %>%
   rename(TP_ID_STA=TimePt_STA,TP_ID_END=TimePt_END)
 
 names(MA)
 names(AS)
-names(HA)
+names(HA19)
+names(HA24)
 setdiff(names(MA),names(AS))
 setdiff(names(AS),names(MA))
-setdiff(names(MA),names(HA))
-setdiff(names(HA),names(MA))
+setdiff(names(MA),names(HA19))
+setdiff(names(MA),names(HA24))
+setdiff(names(HA19),names(MA))
+setdiff(names(HA24),names(MA))
+setdiff(names(AS),names(HA19))
+setdiff(names(AS),names(HA24))
+setdiff(names(HA19),names(AS))
+setdiff(names(HA24),names(AS))
 
-MAASHA=rbind(MA,AS,HA)
+MAASHA=rbind(MA,AS,HA19,HA24)
 uI=sort(unique(MAASHA$Island))
-RegLU=c("MARIAN","PRIA","NWHI","MARIAN","MHI","PRIA","MHI","MARIAN","MHI","SAMOA","MARIAN","NWHI","SAMOA","MARIAN","SAMOA","SAMOA")
+RegLU=c("MARIAN","PRIA","NWHI","MARIAN","MHI","PRIA","NWHI","NWHI","MHI","MARIAN","MHI","SAMOA","MARIAN","NWHI","SAMOA","MARIAN","SAMOA","SAMOA")
 names(RegLU)=uI
 MAASHA$REGION=RegLU[MAASHA$Island]
 
+#cHECK FOR InF CONVERT TO na
+which(is.infinite(),arr.ind = T)
+which(apply(X = MAASHA,2,is.infinite),arr.ind=T)
 
-#
-write.csv(x = MAASHA,file = paste0("./Data/ColonyTransitions/MAASHA_22-24_AllColonyTransitions.csv"),row.names = FALSE)
+MAASHA %>% 
+  mutate(across(where(starts_with("l10")), ~na_if(., Inf)))
+
+
+write.csv(x = MAASHA,file = paste0("./Data/ColonyTransitions/MAASHA_19-24_AllColonyTransitions.csv"),row.names = FALSE)
 
 
 dim(MAASHA)
