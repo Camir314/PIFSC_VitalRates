@@ -1,0 +1,15 @@
+VolumeScenario,ScenarioDescription,PA,SA,P,V
+A,3x3x1,9,21,12,9
+B,3x3_center2,9,25,12,10
+C,4x4x1,16,32,16,16
+D,3x3x2,9,33,12,18
+E,4x4_center2x2x2,16,40,16,20
+F,4x4_center2x2x3,16,48,16,24
+G,5x5x1,25,45,25,25
+H,5x5_center2,25,49,25,26
+I,4x4x2,16,48,16,32
+J,5x5x2,25,65,25,50
+K,5x5x1.3check,25,149,25,51
+L,5x5x1_center3x3x5,25,81,25,61
+M,5x5x1.5check,25,253,25,77
+N,10x10x1234,100,212,40,216
