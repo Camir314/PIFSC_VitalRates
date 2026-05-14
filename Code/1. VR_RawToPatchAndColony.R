@@ -17,7 +17,7 @@ library(sp)
 
 #Rbind all raw MAASHA data
 rawHA <- read.csv("./Data/RawData/HARAMP24_VitalRates_12-21-2025.csv")
-rawMA <- read.csv("./Data/RawData/MARAMP22_VitalRates_06-24-2024.csv")
+rawMA <- read.csv("./Data/RawData/MARAMP25_VitalRates_05-14-2026.csv")
 rawAS <- read.csv("./Data/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
 keepcols=names(rawHA)
 keepcols=keepcols[-c(which(keepcols=="TL_Note"),which(keepcols=="QC_Check"))]  
@@ -30,7 +30,9 @@ effort <- read.csv("./Data/MetaData/VitalRates_SurveyEffort.csv")
 ## (OPTIONAL) Remove superfluous columns:
 colnames(raw)
 # raw <- raw %>% select(-c(OID_, TL_SurfA))
-raw <- raw %>% select(-TL_SurfA)
+raw <- raw %>% select(-TL_SurfA) %>%
+               filter(TL_Class != "Dummy")
+
 
 # Change some column names
 raw <- raw %>% rename("Surface_Area" = "SArea")
@@ -38,6 +40,9 @@ raw <- raw %>% rename("Surface_Area" = "SArea")
 
 ## Look for potential issues in the data:
 lapply(raw, unique)
+
+
+
 
 ## Look for rows with NA values
 rows_with_na <- raw %>%
@@ -52,9 +57,15 @@ print(rows_with_na)
 # a <- raw[raw$Morph_Code != "MD" & raw$Morph_Code != "EM" & raw$Morph_Code != "BR" & raw$Morph_Code != "TB"
 #         & raw$Morph_Code != "PL" & raw$Morph_Code != "KN",]
 # 
-raw <- raw %>% mutate(Morph_Code = case_when(Morph_Code == "RM" ~ "EM",
+raw <- raw %>% mutate(Morph_Code = case_when(Morph_Code == "DI" ~ "DI",
+                                             Morph_Code == "em" ~ "EM",
+                                             Morph_Code == "EN" ~ "EM",
+                                             Morph_Code == "EM`" ~ "EM",
                                              Morph_Code == "EM" ~ "EM",
                                              Morph_Code == "TB" ~ "TB",
+                                             Morph_Code == "AR" ~ "AR",
+                                             Morph_Code == "CB" ~ "CB",
+                                             Morph_Code == "FO" ~ "FO",
                                              Morph_Code == "BR" ~ "BR",
                                              Morph_Code == "KN" ~ "KN",
                                              Morph_Code == "PL" ~ "PL",
@@ -64,7 +75,10 @@ raw <- raw %>% mutate(Annotator = case_when (Annotator == "SJD" ~ "SD",
                                              Annotator == "CA" ~ "CA",
                                              Annotator == "ES" ~ "ES",
                                              Annotator == "KT" ~ "KT",
-                                             Annotator == "MSL" ~ "ML"))
+                                             Annotator == "MSL" ~ "ML",
+                                             Annotator == "IGB" ~ "IB",
+                                             Annotator == "JC" ~ "JC"))
+
 
 
 ## Check if TimePt is labelled correctly:
@@ -127,6 +141,9 @@ vr <- raw
 ## Roll TL_Class up to genus (consider separating PGRA)
 vr <- vr %>% mutate(Genus = case_when(TL_Class == "PMEA" ~ "POCS",
                                           TL_Class == "PVER" ~ "POCS",
+                                          TL_Class == "PMVC" ~ "POCS",
+                                          TL_Class == "PGWC" ~ "POCS",
+                                          TL_Class == "PDAM" ~ "POCS",
                                           TL_Class == "AGLO" ~ "ACSP",
                                           TL_Class == "PGRA" ~ "POCS",
                                           TL_Class == "PLOB" ~ "POSP",
@@ -137,6 +154,8 @@ vr <- vr %>% mutate(Genus = case_when(TL_Class == "PMEA" ~ "POCS",
                                           TL_Class == "MPAT" ~ "MOSP",
                                           TL_Class == "MCAP" ~ "MOSP",
                                           TL_Class == "ACSP" ~ "ACSP",
+                                          TL_Class == "AHYA" ~ "ACSP",
+                                          TL_Class == "ARET" ~ "ACSP",
                                           TL_Class == "POSP" ~ "POSP"))
 lapply(vr, unique) # double check
 
@@ -145,7 +164,7 @@ lapply(vr, unique) # double check
 vr$Island <- str_sub(vr$Site,5,7)
 
 ## Add Lat and Long
-ll <- ll %>% filter(Region != "vr") %>% select(-Year.Collected)
+ll <- ll %>% filter(Region != "vr")
 
 vr <- left_join(vr, ll)
 
@@ -153,12 +172,13 @@ vr <- left_join(vr, ll)
 ## Add m2 surveyed
 vr$Year <- as.integer(vr$Year)
 a <- left_join(vr, effort, by = c("Island","Site", "Year","Genus"))
+vr<-a
 
 ## Add area:perimeter ratio
 
 vr$area_perim <- vr$Shape_Area/vr$Shape_Leng
 
-vr<-a
+
 
 head(vr)
 
