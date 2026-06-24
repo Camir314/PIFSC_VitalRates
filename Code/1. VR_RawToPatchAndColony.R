@@ -1,7 +1,7 @@
 #### MARAMP 2022 Vital Rates QC, initial dataframe creations and descriptive stats
 ### Corinne Amir 
 ### July 2023
-
+rm(list=ls())
 library(dplyr)
 library(anytime)
 library(ggplot2)
@@ -20,7 +20,8 @@ rawHA <- read.csv("./Data/RawData/HARAMP24_VitalRates_12-21-2025.csv")
 rawMA <- read.csv("./Data/RawData/MARAMP25_VitalRates_05-14-2026.csv")
 rawAS <- read.csv("./Data/RawData/ASRAMP23_VitalRates_06-20-2024.csv")
 keepcols=names(rawHA)
-keepcols=keepcols[-c(which(keepcols=="TL_Note"),which(keepcols=="QC_Check"))]  
+keepcols=keepcols[-c(which(keepcols=="TL_Note"),which(keepcols=="X"),which(keepcols=="QC_Check"))]  
+#setdiff(keepcols,names(rawAS))
 raw=rbind(rawMA[,keepcols],rawAS[,keepcols],rawHA[,keepcols])
 
 ll <- read.csv("./Data/MetaData/VitalRates_LatLong.csv")
@@ -118,8 +119,8 @@ diff_species <- raw %>% group_by(Genet_full, TL_Class) %>%
   summarise() %>% 
   filter(n() >1) %>% 
   ungroup()
-print(diff_species)
-
+print(diff_species,n=35)
+################## Noted but not resolved?
 
 raw$Genet_noyear <- paste(raw$Site,  raw$TL_Genet, sep = "_") # Check between time points
 raw$Patch_noyear <- paste(raw$Site,  raw$TL_id, sep = "_")
@@ -129,8 +130,7 @@ diff_species_diffyear <- raw %>% group_by(Genet_noyear, TL_Class) %>%
   filter(n() >1) %>% 
   ungroup()
 print(diff_species_diffyear) # for now, only going to edit where genus isn't equal
-
-
+################## Noted but not resolved?
 
 
 #### Create additional columns #####
@@ -181,6 +181,15 @@ vr$area_perim <- vr$Shape_Area/vr$Shape_Leng
 
 
 head(vr)
+
+diff_genus_diffyear <- vr %>% group_by(Genet_noyear, Genus) %>% 
+  summarise() %>% 
+  filter(n() >1) %>% 
+  ungroup()
+print(diff_genus_diffyear) # for now, only going to edit where genus isn't equal
+
+#Remove colonies with genus-scale disagreement
+vr=vr %>% filter(!Genet_noyear%in%diff_genus_diffyear$Genet_noyear)
 
 ## Add region code
 
@@ -297,8 +306,8 @@ head(archive)
 #### Export Data ####
 
 #setwd('C:/Users/Corinne.Amir/Documents/GitHub/PIFSC_VitalRates/CSV files')
-write.csv(vr,"./Data/PatchLevel/MAASHA22-24_VitalRates_patchlevel_CLEAN.csv",row.names = F)
-write.csv(vr_col,"./Data/ColonyLevel/MAASHA22-24_VitalRates_colonylevel_CLEAN.csv",row.names = F)
+write.csv(vr,"./Data/PatchLevel/MAASHA22-25_VitalRates_patchlevel_CLEAN.csv",row.names = F)
+write.csv(vr_col,"./Data/ColonyLevel/MAASHA22-25_VitalRates_colonylevel_CLEAN.csv",row.names = F)
 write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/HARAMP/HARAMP24_VitalRates_colonylevel_InportArchive.csv",row.names = F)
 
 #write.csv(archive,"C:/Users/corinne.amir/Documents/Archiving/Vital Rates/ASRAMP/ASRAMP23_VitalRates_colonylevel_InportArchive.csv",row.names = F)

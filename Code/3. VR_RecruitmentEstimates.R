@@ -17,13 +17,19 @@ m22cm2=function(x){return(x*10^4)}
 #source("R/gcdist.R") # No such file or directory
 
 # Loading / Managing DataFrames: ColTrans, surv_dat  ----------------------------------------------  ---------
-ColTrans=read.csv("./Data/ColonyTransitions/MAASHA_22-24_AllColonyTransitions.csv")
+ColTrans=read.csv("./Data/ColonyTransitions/MAASHA19-24_ColonyTransitions.csv")
+ColTrans$StartingDate=ymd(ColTrans$Date_STA)
+ColTrans$Date_STA[is.na(ColTrans$StartingDate)]
+
 ColTrans=ColTrans %>% 
-  rename(StartingDate=TL_Date_STA,EndingDate=TL_Date_END) %>% 
-  mutate(SiteInterval=paste0(Site,"_",Interval))
+  rename(Genus=Genus_Code) %>% 
+  mutate(SiteInterval=paste0(Site,"_",Interval),
+         StartingDate=ymd(Date_STA),
+         EndingDate=ymd(Date_END))
 
 #Prepping surv_dat output
-surv_dat=ColTrans[,c("Site","Site_Genet","Genus","Interval","SiteInterval","l10_Area_STA","nPatches_STA","Survival","TransitionTypeSimple","Interval_Years","StartingDate","EndingDate")] 
+surv_colselect=c("Site","Site_Genet","Genus","Interval","SiteInterval","l10_Area_STA","nPatches_STA","Survival","TransitionTypeSimple","Interval_Years","StartingDate","EndingDate")
+surv_dat=ColTrans[,surv_colselect] 
 # ^ missing SiteInterval, N_t0, TransitionType, StartingDate","EndingDate. Needs to b3 added in code #2
 # Is this located in the packages code?
 surv_dat=subset(surv_dat,TransitionTypeSimple!="RECR")
@@ -32,8 +38,8 @@ surv_dat=surv_dat %>% rename(ColonyID=Site_Genet,size=l10_Area_STA,survival=Surv
 #names(surv_dat)=c("ColonyID","size","survival","Genus","Interval","SiteInterval","Site","N_t0","TransitionType","Interval_Years")
 
 # Change these file names when saving data to refect the new changes
-save(ColTrans, file="data/Colony_Data_20251216_edited.rdata")
-save(surv_dat, file="data/Colony_Data_20251216_edited_survival.rdata")
+save(ColTrans, file="data/Colony_Data_20260623_edited.rdata")
+save(surv_dat, file="data/Colony_Data_20260623_edited_survival.rdata")
 
 
 # Where we run the models -------------------------------------------------
