@@ -5,11 +5,11 @@ library(factoextra)
 library(NbClust)
 
 
-REGIONYR=c("MAASHA22-24")### We will load un-updated "HA19" data in second script run see 2B
+REGIONYR=c("MAASHA22-25")### We will load un-updated "HA19" data in second script run see 2B
 for (iRY in REGIONYR){
   # Data Load ---------------------------------------------------------------
   Col=read.csv(paste0("./Data/ColonyLevel/",iRY,"_VitalRates_colonylevel_CLEAN.csv"))
-  Col$Date=ymd(Col$TL_Date)
+  Col$Date=anydate(Col$TL_Date)
   Col=Col %>% arrange(Site_Genet,TimePt) %>% rename(Genus_Code=Genus,Species_Code=TL_Class) %>% filter(Genus_Code != "Dummy")
   # if (iRY%in%c("MARAMP22","ASRAMP23")){Col=Col %>% rename(Surface_Area=SArea)}
     
@@ -62,6 +62,13 @@ for (iRY in REGIONYR){
   }
   #table(Col$TP_ID,Col$Site)
   
+  
+  #June 2026 TAO tracked a date error back to OCC-GUA-015 TimePoint error
+  #Code Checks:
+  #Col %>% select(Site,TimePt,Year) %>% distinct() %>% arrange(Site,TimePt) %>% group_by(Site) %>% summarize(Ntp=length(Site),MaxTP=1+max(TimePt)) %>% filter(Ntp!=MaxTP)
+  #Col %>% select(Site,TimePt,Year) %>% distinct() %>% arrange(Site,TimePt) %>% filter(Site=="OCC-GUA-015")
+  #2022 sampling should be TimePt 1
+  Col$TimePt[which(Col$Site=="OCC-GUA-015"&Col$Year==2022)]=1
   
   # Two-Stage Transition Loop - Rbind Aggregation ---------------------------
   uTP=sort(unique(Col$TimePt))

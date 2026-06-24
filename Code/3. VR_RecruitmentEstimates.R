@@ -17,9 +17,7 @@ m22cm2=function(x){return(x*10^4)}
 #source("R/gcdist.R") # No such file or directory
 
 # Loading / Managing DataFrames: ColTrans, surv_dat  ----------------------------------------------  ---------
-ColTrans=read.csv("./Data/ColonyTransitions/MAASHA19-24_ColonyTransitions.csv")
-ColTrans$StartingDate=ymd(ColTrans$Date_STA)
-ColTrans$Date_STA[is.na(ColTrans$StartingDate)]
+ColTrans=read.csv("./Data/ColonyTransitions/MAASHA19-25_ColonyTransitions.csv")
 
 ColTrans=ColTrans %>% 
   rename(Genus=Genus_Code) %>% 

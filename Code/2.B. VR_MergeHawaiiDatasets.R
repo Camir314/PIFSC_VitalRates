@@ -7,7 +7,7 @@ library(stringr)
 library(anytime)
 
 
-load("./Data/ColonyTransitions/HA_Trans/Colony_Data_20210917_edited.Rdata") # 2019 dataset
+loadname=load("./Data/ColonyTransitions/HA_Trans/Colony_Data_20210917_edited.Rdata") # 2019 dataset
 CT24=read.csv("./Data/ColonyTransitions/HARAMP24_ColonyTransitions.csv")
 CL24=read.csv("./Data/ColonyLevel/HARAMP24_VitalRates_colonylevel_CLEAN.csv")
 ll <- read.csv("./Data/MetaData/VitalRates_LatLong.csv")
@@ -16,13 +16,20 @@ effort <- read.csv("./Data/MetaData/VitalRates_SurveyEffort.csv")
 
 
 # Remove sites resampled in 2024:
-ColonyLevel %>% distinct(ColonyLevel$Site)
-CL24 %>% distinct(CL24$Site)
+clsite=ColonyLevel %>% filter(Island%in%c("FFS","HAW","MAI","OAH","PHR")) %>% distinct(Site) %>% pull(Site) %>% sort() %>% gsub(pattern="_",replacement="-")
+cl24site=CL24 %>% distinct(Site) %>% pull(Site) %>% sort()  
+cl24site= paste0(substr(cl24site,5,8),"OCC-",substr(cl24site,9,11)) %>% sort()
+clsite
+cl24site
+setdiff(clsite,cl24site)
 
-rmsite = c("HAW_SIO_K08", "HAW_SIO_K10", "KUR_OCC_010", "LIS_OCC_005","MAI_SIO_K01","MAI_SIO_K02","FFS_OCC_014")
+keepsite19 = c("FFS_OCC_014","HAW_SIO_K08", "HAW_SIO_K10", "KUR_OCC_010", "LIS_OCC_005","MAI_SIO_K01","MAI_SIO_K02")
+#MAI-SIO-OL3 is now called OCC-MAI-017. It exists in MAASHA, so we don't add it back here
 
 `%notin%` <- Negate(`%in%`)
-ColonyLevel <- ColonyLevel %>% filter(Site %in% rmsite) 
+#Keep ColonyLevel not in '24 or MAASHA
+ColonyLevel <- ColonyLevel %>% filter(Site %in% keepsite19) 
+
 
 #QC Checks for same ColonyID, but tp0 endsize != tp1 startsize (also for N)
 uCol=unique(ColonyLevel$ColonyID)
@@ -113,7 +120,7 @@ head(dup_col)
 
 
 #First pull other MASHA data for structure comparison
-MAASHA=read.csv("./Data/ColonyTransitions/MAASHA22-24_ColonyTransitions.csv")
+MAASHA=read.csv("./Data/ColonyTransitions/MAASHA22-25_ColonyTransitions.csv")
 MAASHA=MAASHA %>% select(-X)
 names(MAASHA)
 names(ColonyLevel)
@@ -152,10 +159,24 @@ ColonyLevel_RBIND=ColonyLevel_RBIND %>% rename(Date_STA=StartingDate,Date_END=En
 
 MAASHA$METHOD="NEW_TAGLAB_SA"
 ColonyLevel_RBIND$METHOD="OLD_JUSTARC_NOSA"
-MAASHA=rbind(MAASHA,ColonyLevel_RBIND)
+dim(MAASHA)
+dim(ColonyLevel_RBIND)
+names(ColonyLevel_RBIND)
+
+#drop bad dates - NONE! Fixed OCC-GUA-015 with TimePt issue
+dropdates_i=c(which(is.na(MAASHA$Date_STA)),which(is.na(MAASHA$Date_END)))
+MAASHA[dropdates_i,]
+
+MAASHA$Date_STA=ymd(MAASHA$Date_STA)
+MAASHA$Date_END=ymd(MAASHA$Date_END)
+MAASHA.=rbind(MAASHA,ColonyLevel_RBIND)
+
+#Check Dates
+which(is.na(MAASHA.$Date_STA))
+which(is.na(ymd(MAASHA.$Date_STA)))
 
 # Export data
-write.csv(MAASHA,"./Data/ColonyTransitions/MAASHA19-24_ColonyTransitions.csv")
+write.csv(MAASHA.,"./Data/ColonyTransitions/MAASHA19-25_ColonyTransitions.csv")
 
 
 
